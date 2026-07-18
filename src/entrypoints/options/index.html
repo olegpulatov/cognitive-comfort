@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cognitive Comfort Settings</title>
+    <link rel="stylesheet" href="../popup/style.css" />
+    <style>
+      html {
+        height: 100%;
+        background: #090d15;
+        overscroll-behavior: none;
+      }
+
+      body {
+        height: auto;
+        min-height: 100vh;
+        min-width: auto;
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 32px 16px;
+      }
+    </style>
+  </head>
+  <body class="options-shell">
+    <div class="container">
+      <header>
+        <div>
+          <h1>Cognitive Comfort Settings</h1>
+          <p class="subtitle">Persistent preferences stored locally in the browser</p>
+        </div>
+        <button id="pauseBtn" class="pause-btn" title="Ctrl+Shift+U">Pause</button>
+      </header>
+
+      <section class="site-section">
+        <div class="site-row">
+          <span class="row-label">Global</span>
+          <div class="site-buttons">
+            <button id="globalEnabled" class="site-btn" data-value="enabled">Hide</button>
+            <button id="globalDisabled" class="site-btn" data-value="disabled">Show</button>
+          </div>
+        </div>
+        <div class="site-info">
+          <span class="site-label">This site:</span>
+          <span id="currentDomain" class="site-domain">-</span>
+        </div>
+        <div class="site-row">
+          <span class="row-label">Media</span>
+          <div class="site-buttons">
+            <button id="siteEnabled" class="site-btn" data-value="enabled">Hide</button>
+            <button id="siteDisabled" class="site-btn" data-value="disabled">Show</button>
+            <button id="siteDefault" class="site-btn" data-value="default">Global</button>
+          </div>
+        </div>
+        <div class="site-row">
+          <span class="row-label">Emojis</span>
+          <div class="site-buttons">
+            <button id="emojiSiteEnabled" class="site-btn" data-value="enabled">Hide</button>
+            <button id="emojiSiteDisabled" class="site-btn" data-value="disabled">Show</button>
+            <button id="emojiSiteDefault" class="site-btn" data-value="default">Global</button>
+          </div>
+        </div>
+      </section>
+      <section class="global-section">
+        <div class="setting">
+          <label>Emoji Default</label>
+          <div class="site-buttons">
+            <button id="emojiGlobalEnabled" class="site-btn" data-value="enabled">Hide</button>
+            <button id="emojiGlobalDisabled" class="site-btn" data-value="disabled">Show</button>
+          </div>
+          <span class="setting-note">Used when a site stays on Global.</span>
+        </div>
+
+        <div class="setting">
+          <label>Blur Scope</label>
+          <select id="blurScope">
+            <option value="content">Content Media</option>
+            <option value="all">Content + Small UI Media</option>
+          </select>
+        </div>
+
+        <div class="setting">
+          <label>Reveal Mode</label>
+          <select id="revealMode">
+            <option value="click">Click Only</option>
+            <option value="both">Hover + Click Lock</option>
+            <option value="hover">Hover Only</option>
+          </select>
+        </div>
+
+        <div class="setting blur-settings">
+          <label>Blur Amount: <span id="blurAmountValue">50</span>px</label>
+          <input type="range" id="blurAmount" min="1" max="100" value="50" />
+        </div>
+      </section>
+
+      <footer class="shortcuts-footer">
+        <div class="shortcuts-header">
+          <span class="shortcuts-label">Shortcuts</span>
+          <button id="editShortcuts" class="edit-shortcuts-btn" title="Edit in browser settings">
+            Edit
+          </button>
+        </div>
+        <div id="shortcutsList" class="shortcuts-list"></div>
+        <div id="shortcutHelp" class="shortcut-help" hidden></div>
+      </footer>
+
+      <div id="buildInfo" class="build-info"></div>
+    </div>
+    <script type="module" src="../popup/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "exclude": [
+    ".output",
+    "node_modules",
+    "submodules",
+    "docs",
+    "wxt.dev-web-fetches"
+  ]
+}

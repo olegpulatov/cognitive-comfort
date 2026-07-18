@@ -1,0 +1,51 @@
+{
+  "name": "cognitive-comfort",
+  "description": "Hide distracting media until you choose to reveal it",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "license": "MPL-2.0",
+  "packageManager": "pnpm@11.13.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": "git+https://github.com/olegpulatov/cognitive-comfort.git",
+  "bugs": {
+    "url": "https://github.com/olegpulatov/cognitive-comfort/issues"
+  },
+  "homepage": "https://github.com/olegpulatov/cognitive-comfort#readme",
+  "scripts": {
+    "dev": "BROWSER=chromium DEBUG_PORT=6202 wxt -b chromium",
+    "dev:chrome": "BROWSER=chrome DEBUG_PORT=6201 wxt -b chrome",
+    "dev:firefox": "BROWSER=firefox DEBUG_PORT=6203 wxt -b firefox",
+    "dev:edge": "BROWSER=edge DEBUG_PORT=6204 wxt -b edge",
+    "build": "node ./scripts/clean-output.mjs && BROWSER=chromium wxt build -b chromium",
+    "build:chrome": "node ./scripts/clean-output.mjs && BROWSER=chrome wxt build -b chrome",
+    "build:firefox": "node ./scripts/clean-output.mjs && BROWSER=firefox wxt build -b firefox",
+    "build:edge": "node ./scripts/clean-output.mjs && BROWSER=edge wxt build -b edge",
+    "safari:project": "bash ./scripts/prepare-safari.sh",
+    "zip": "BROWSER=chromium wxt zip -b chromium",
+    "zip:chrome": "BROWSER=chrome wxt zip -b chrome",
+    "zip:firefox": "BROWSER=firefox wxt zip -b firefox",
+    "zip:edge": "BROWSER=edge wxt zip -b edge",
+    "compile": "wxt prepare && tsc --noEmit",
+    "check": "pnpm compile",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "BUILD_PROFILE=public pnpm build:chrome && playwright test",
+    "test:watch": "vitest",
+    "postinstall": "wxt prepare",
+    "tag": "bash ./scripts/tag-release.sh patch",
+    "tag:minor": "bash ./scripts/tag-release.sh minor",
+    "tag:major": "bash ./scripts/tag-release.sh major"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@vitest/coverage-v8": "4.1.10",
+    "happy-dom": "^20.10.6",
+    "smol-toml": "^1.4.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10",
+    "wxt": "^0.20.13"
+  }
+}

@@ -1,0 +1,19 @@
+[meta]
+name = "local"
+
+[product]
+name = "Cognitive Comfort"
+description = "Hide distracting media until you intentionally reveal it."
+firefoxExtensionId = "cognitive-comfort@olegpulatov.github.io"
+
+[defaults]
+enabled = true
+blurScope = "all"
+revealMode = "both"
+blurAmount = 50
+paused = false
+blockEmojis = true
+
+[distribution]
+safariAppName = "Cognitive Comfort"
+safariBundleId = "io.github.olegpulatov.cognitive-comfort.local"

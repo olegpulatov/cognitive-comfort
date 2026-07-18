@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cognitive Comfort browser fixture</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; }
+    section { margin-block: 24px; }
+    .media { display: block; width: 240px; height: 160px; }
+    #small-image { width: 12px; height: 12px; }
+    #bare-svg { width: 24px; height: 24px; }
+    .linked-stack { display: block; position: relative; width: 240px; height: 160px; }
+    .linked-stack img { position: absolute; inset: 0; width: 240px; height: 160px; }
+    #linked-overlay { opacity: 0.35; }
+    .background-media { width: 240px; height: 160px; background: center / cover url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Crect width='240' height='160' fill='%237a9'/%3E%3C/svg%3E"); }
+    [contenteditable] { border: 1px solid #999; padding: 8px; width: 220px; }
+  </style>
+</head>
+<body>
+  <h1>Extension behavior fixture</h1>
+
+  <section id="image-fixtures">
+    <img id="normal-image" class="media" alt="normal fixture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Crect width='240' height='160' fill='%23486'/%3E%3C/svg%3E">
+    <img id="small-image" alt="small fixture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='%23c86'/%3E%3C/svg%3E">
+    <a id="linked-media" class="linked-stack" href="#linked-destination">
+      <img id="linked-image" alt="linked fixture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Crect width='240' height='160' fill='%23648'/%3E%3C/svg%3E">
+      <img id="linked-overlay" alt="linked overlay" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Ccircle cx='120' cy='80' r='45' fill='%23fff'/%3E%3C/svg%3E">
+    </a>
+  </section>
+
+  <section id="media-elements">
+    <video id="video" class="media" controls></video>
+    <canvas id="canvas" width="240" height="160"></canvas>
+    <iframe id="iframe" class="media" title="fixture frame" src="/youtube-frame"></iframe>
+    <svg id="bare-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle></svg>
+    <div id="background-media" class="background-media"></div>
+  </section>
+
+  <section id="text-fixtures">
+    <p id="emoji-text">Optional emoji control 🧠</p>
+    <div id="editable-text" contenteditable="true">Editable emoji remains visible 🧩</div>
+  </section>
+
+  <section id="nested-cluster">
+    <div><div><img class="media" alt="nested fixture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Crect width='240' height='160' fill='%23864'/%3E%3C/svg%3E"></div></div>
+  </section>
+
+  <script>
+    window.setTimeout(() => {
+      const dynamic = document.createElement('div');
+      dynamic.id = 'dynamic-background';
+      dynamic.className = 'background-media';
+      document.body.append(dynamic);
+    }, 25);
+  </script>
+</body>
+</html>
