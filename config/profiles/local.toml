@@ -3,7 +3,7 @@ name = "local"
 
 [product]
 name = "Cognitive Comfort"
-description = "Hide distracting media until you intentionally reveal it."
+description = "Blurs images, videos, and emoji until you choose to see them."
 firefoxExtensionId = "cognitive-comfort@olegpulatov.github.io"
 
 [defaults]

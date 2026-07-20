@@ -1,8 +1,12 @@
 # Cognitive Comfort
 
-Cognitive Comfort is a focused browser extension that blurs distracting media until you intentionally reveal it. It targets Chrome, Edge, Firefox, and macOS Safari through [WXT](https://wxt.dev).
+Cognitive Comfort blurs images, videos, and other media on the pages you visit until you choose to see them. Built with WXT for Chrome, Edge, Firefox, and macOS Safari.
 
-## Product boundary
+**Pre-release:** This is an early version.
+
+[Install via Chrome Web Store](https://chromewebstore.google.com/detail/cognitive-comfort/fachhhdjmbceikclmlicjdaikhajdpbi)
+
+## What it does
 
 - Blurs images, video, canvases, supported embedded media, and eligible CSS background images.
 - Reveals media by click, hover, or Control+Shift+A peek.
@@ -59,17 +63,17 @@ The Firefox sources ZIP is generated from an explicit source allowlist.
 
 ## Common commands
 
-| Task | Command |
-| --- | --- |
-| Dev session | `just dev chrome` |
-| Type-check | `just compile` |
-| Unit tests | `just test` |
-| Coverage gate | `just test-coverage` |
-| Chromium extension smoke | `just test-e2e` |
-| Build one target | `env BUILD_PROFILE=public just build chrome` |
-| Zip all targets | `env BUILD_PROFILE=public just zip-all` |
+| Task                             | Command                                        |
+| -------------------------------- | ---------------------------------------------- |
+| Dev session                      | `just dev chrome`                              |
+| Type-check                       | `just compile`                                 |
+| Unit tests                       | `just test`                                    |
+| Coverage gate                    | `just test-coverage`                           |
+| Chromium extension smoke         | `just test-e2e`                                |
+| Build one target                 | `env BUILD_PROFILE=public just build chrome`   |
+| Zip all targets                  | `env BUILD_PROFILE=public just zip-all`        |
 | Generate unsigned Safari project | `env BUILD_PROFILE=public just safari-project` |
-| Verify then tag locally | `just tag patch` |
+| Verify then tag locally          | `just tag patch`                               |
 
 Tagging requires `main`, verifies first, stages only `package.json`, and does not push or publish.
 
@@ -88,11 +92,11 @@ Settings use one `browser.storage.local` key, `comfortSettings`. Stored values a
 
 ## Keyboard shortcuts
 
-| Shortcut | Action |
-| --- | --- |
-| `Ctrl+Shift+U` | Pause or resume |
+| Shortcut       | Action              |
+| -------------- | ------------------- |
+| `Ctrl+Shift+U` | Pause or resume     |
 | `Ctrl+Shift+O` | Toggle current site |
-| `Ctrl+Shift+A` | Peek while held |
+| `Ctrl+Shift+A` | Peek while held     |
 | `Ctrl+Shift+E` | Toggle global media |
 
 On macOS these use Control, not Command. The popup's Edit button links to browser shortcut settings.
