@@ -2,7 +2,7 @@
   "name": "cognitive-comfort",
   "description": "Hide distracting media until you choose to reveal it",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "license": "MPL-2.0",
   "packageManager": "pnpm@11.13.1",
