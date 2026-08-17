@@ -1,0 +1,90 @@
+@import '../shared/panel.css';
+
+html {
+  min-height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.options-panel {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 20px 56px;
+}
+
+.options-panel .sheet + .sheet {
+  margin-top: var(--gap-section);
+}
+
+.options-panel .notice {
+  margin-top: 0;
+  margin-bottom: var(--gap-section);
+}
+
+.site-rule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 1.5fr);
+  gap: var(--gap-wide);
+  align-items: start;
+  padding: var(--gap-wide) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.site-rule:first-child {
+  padding-top: 0;
+}
+
+.site-rule:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.site-rule-controls {
+  min-width: 0;
+}
+
+.site-rule-controls .segments {
+  font-size: var(--step-1);
+}
+
+.site-rule-controls .segment span {
+  padding-right: 6px;
+  padding-left: 6px;
+  font-size: var(--step-1);
+}
+
+.site-rule-controls .field-legend {
+  color: var(--ink-quiet);
+  font-family: var(--mono);
+  font-size: var(--step-1);
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.site-rule-controls .field + .field {
+  margin-top: var(--gap);
+}
+
+.site-rule-remove {
+  margin-top: var(--gap-tight);
+}
+
+.shortcut-actions {
+  margin-top: var(--gap);
+}
+
+@media (max-width: 560px) {
+  .options-panel {
+    padding: 28px 14px 40px;
+  }
+
+  .site-rule {
+    grid-template-columns: 1fr;
+    gap: var(--gap);
+  }
+}

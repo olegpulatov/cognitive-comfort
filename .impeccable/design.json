@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-17T00:00:00.000Z",
+  "title": "Design System: Cognitive Comfort",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Ink-Umber Ground", "canonical": "#14110e", "tonalRamp": ["#14110e", "#211c17", "#382f27", "#574a3d", "#796958", "#9d8d79", "#c4b6a3", "#eee6d8"] },
+      "ground-lift": { "role": "neutral", "displayName": "Lifted Ground", "canonical": "#1a1713", "tonalRamp": ["#15120f", "#211d18", "#352e26", "#504538", "#706252", "#948472", "#bcad9a", "#e8ded0"] },
+      "sheet": { "role": "neutral", "displayName": "Dim Parchment Sheet", "canonical": "#201c17", "tonalRamp": ["#161310", "#211d18", "#352f27", "#50473b", "#716657", "#958879", "#bcafa0", "#e8dfd4"] },
+      "sheet-raised": { "role": "neutral", "displayName": "Raised Parchment Sheet", "canonical": "#262019", "tonalRamp": ["#17130f", "#251f18", "#3a3025", "#574938", "#776553", "#9a8773", "#c0ad99", "#eadfd2"] },
+      "sheet-hover": { "role": "neutral", "displayName": "Hovered Parchment Sheet", "canonical": "#2d251c", "tonalRamp": ["#18130e", "#2d251c", "#44372a", "#604e3b", "#806a53", "#a18c73", "#c7b59d", "#eee2d2"] },
+      "rule": { "role": "neutral", "displayName": "Hairline Rule", "canonical": "#332c23", "tonalRamp": ["#18140f", "#2a241c", "#41372a", "#5d4f3e", "#7c6c58", "#9f907b", "#c4b7a4", "#ede5da"] },
+      "rule-strong": { "role": "neutral", "displayName": "Strong Rule", "canonical": "#4a4032", "tonalRamp": ["#19150f", "#2d261c", "#473b2c", "#61523f", "#806e58", "#a2927c", "#c7b9a6", "#eee6da"] },
+      "ink": { "role": "neutral", "displayName": "Primary Parchment Ink", "canonical": "#eee6d8", "tonalRamp": ["#241f19", "#3d352b", "#594e40", "#796b59", "#9b8c78", "#bdae9a", "#d8cdbc", "#f2eadf"] },
+      "ink-quiet": { "role": "neutral", "displayName": "Quiet Parchment Ink", "canonical": "#b0a390", "tonalRamp": ["#201c17", "#393128", "#554a3d", "#746654", "#958672", "#b4a58f", "#d1c5b4", "#ede5da"] },
+      "ink-faint": { "role": "neutral", "displayName": "Faint Parchment Ink", "canonical": "#96897a", "tonalRamp": ["#1f1a15", "#362f27", "#50463a", "#6d6051", "#8d7e6c", "#ad9e8a", "#cdc1b0", "#ece4d9"] },
+      "brass": { "role": "primary", "displayName": "Filing Brass", "canonical": "#cba463", "tonalRamp": ["#2b210f", "#493719", "#6c5024", "#906b31", "#b18742", "#cba463", "#dfc38f", "#f3e4c3"] },
+      "brass-quiet": { "role": "primary", "displayName": "Quiet Brass", "canonical": "#8d7240", "tonalRamp": ["#271e0f", "#423219", "#604923", "#7c6030", "#9b7940", "#b99a63", "#d6bd8c", "#efe1bc"] },
+      "brass-wash": { "role": "primary", "displayName": "Brass Wash", "canonical": "rgba(203, 164, 99, 0.13)", "tonalRamp": ["rgba(203,164,99,0.08)", "rgba(203,164,99,0.13)", "rgba(203,164,99,0.2)", "rgba(203,164,99,0.3)", "rgba(203,164,99,0.42)", "rgba(203,164,99,0.56)", "rgba(203,164,99,0.72)", "rgba(203,164,99,0.9)"] },
+      "stamp": { "role": "secondary", "displayName": "Cancellation Stamp", "canonical": "#c4705a", "tonalRamp": ["#2d1712", "#4b271e", "#6d392d", "#914c3c", "#b45f4c", "#ce7d69", "#e3a896", "#f4d8cc"] },
+      "stamp-ink": { "role": "secondary", "displayName": "Stamp Ink", "canonical": "#f0cfc4", "tonalRamp": ["#2c1a16", "#4a2c25", "#6b4036", "#8e5749", "#b47161", "#d39180", "#e6b4a6", "#f5ddd5"] },
+      "stamp-wash": { "role": "secondary", "displayName": "Stamp Wash", "canonical": "rgba(196, 112, 90, 0.12)", "tonalRamp": ["rgba(196,112,90,0.07)", "rgba(196,112,90,0.12)", "rgba(196,112,90,0.2)", "rgba(196,112,90,0.3)", "rgba(196,112,90,0.42)", "rgba(196,112,90,0.56)", "rgba(196,112,90,0.72)", "rgba(196,112,90,0.9)"] }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "Serif content and controls at opsz 14." },
+      "wordmark": { "displayName": "Wordmark", "purpose": "Compact surface identity at opsz 18." },
+      "sheet-subject": { "displayName": "Sheet Subject", "purpose": "Domain or record subject at opsz 18; wraps anywhere for long domains." },
+      "label": { "displayName": "Catalog Label", "purpose": "Mono uppercase legends and metadata." },
+      "ledger": { "displayName": "Ledger", "purpose": "Effective-state sentence at opsz 16, capped at 64ch." }
+    },
+    "shadows": [
+      { "name": "focus", "value": "0 0 0 2px var(--ground), 0 0 0 4px var(--brass)", "purpose": "Visual keyboard focus paired with a transparent 2px outline so forced-colors mode retains an indicator." }
+    ],
+    "motion": [
+      { "name": "filed", "value": "220ms cubic-bezier(0.16, 0.84, 0.3, 1)", "purpose": "Successful-change settle on the changed sheet or individual filed-rule row." },
+      { "name": "control-state", "value": "140ms ease-out", "purpose": "Color and surface transitions on segments and presses." },
+      { "name": "reduced-motion", "value": "1ms", "purpose": "Global animation and transition duration under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "site-rule-collapse", "value": "560px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Sheet",
+      "kind": "card",
+      "refersTo": "sheet",
+      "description": "Opaque parchment record container with an accessible mono catalog heading.",
+      "html": "<section class=\"ds-sheet\" aria-labelledby=\"ds-sheet-heading\"><h2 id=\"ds-sheet-heading\" class=\"ds-sheet-legend\">Blur</h2><p>Serif content belongs here.</p></section>",
+      "css": ".ds-sheet{padding:18px 18px 12px;border:1px solid var(--rule);border-radius:var(--radius);background:var(--sheet);color:var(--ink);font-family:var(--serif)}.ds-sheet-legend{margin:0 0 18px;padding:0 0 8px;border-bottom:1px solid var(--rule);color:var(--ink-quiet);font-family:var(--mono);font-size:var(--step-1);letter-spacing:.11em;text-transform:uppercase}"
+    },
+    {
+      "name": "Press",
+      "kind": "button",
+      "refersTo": "press",
+      "description": "Restrained bordered action with forced-colors-safe keyboard focus.",
+      "html": "<button class=\"ds-press\" type=\"button\">Pause</button>",
+      "css": ".ds-press{border:1px solid var(--rule-strong);border-radius:var(--radius);background:var(--sheet-raised);color:var(--ink);font-family:var(--serif);font-size:var(--step-0);padding:6px 12px;cursor:pointer;transition:background-color 140ms ease-out,border-color 140ms ease-out}.ds-press:hover{background:var(--sheet-hover);border-color:var(--brass-quiet)}.ds-press:focus-visible{outline:2px solid transparent;outline-offset:2px;box-shadow:var(--focus)}"
+    },
+    {
+      "name": "Segmented Radio Group",
+      "kind": "custom",
+      "refersTo": "segment-checked",
+      "description": "Native radio choices presented as a catalog switch.",
+      "html": "<fieldset class=\"ds-field\"><legend class=\"ds-field-legend\">Media</legend><div class=\"ds-segments\"><label class=\"ds-segment\"><input type=\"radio\" name=\"ds-media\" checked><span>Blur</span></label><label class=\"ds-segment\"><input type=\"radio\" name=\"ds-media\"><span>Show</span></label></div></fieldset>",
+      "css": ".ds-field{border:0}.ds-field-legend{display:block;margin-bottom:8px;color:var(--ink);font-family:var(--serif);font-size:var(--step-0);font-weight:600}.ds-segments{display:flex;border:1px solid var(--rule-strong);border-radius:var(--radius);background:var(--ground);overflow:hidden}.ds-segment{position:relative;flex:1}.ds-segment+.ds-segment{border-left:1px solid var(--rule-strong)}.ds-segment input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}.ds-segment span{display:block;padding:9px 10px 8px;border-bottom:2px solid transparent;color:var(--ink-quiet);text-align:center}.ds-segment input:hover+span{background:var(--sheet-raised);color:var(--ink)}.ds-segment input:checked+span{background:var(--brass-wash);border-bottom-color:var(--brass);color:var(--ink);font-weight:600}.ds-segment input:focus-visible+span{outline:2px solid var(--brass);outline-offset:-2px;color:var(--ink)}"
+    },
+    {
+      "name": "Field Note",
+      "kind": "custom",
+      "description": "Bounded supporting copy beneath a control.",
+      "html": "<span class=\"ds-field-note\">Applies only where no site rule is filed.</span>",
+      "css": ".ds-field-note{display:block;max-width:64ch;margin-top:8px;color:var(--ink-quiet);font-family:var(--serif);font-size:var(--step-1);line-height:1.4;text-wrap:pretty}"
+    },
+    {
+      "name": "Save Status Notice",
+      "kind": "custom",
+      "refersTo": "notice",
+      "description": "Explicit announced save or removal status, not a generic banner.",
+      "html": "<div class=\"ds-notice\" role=\"status\">That change could not be saved, so it is not in effect. Try again.</div>",
+      "css": ".ds-notice{padding:8px 12px;border:1px solid var(--stamp);border-radius:var(--radius);background:var(--stamp-wash);color:var(--stamp-ink);font-family:var(--serif);font-size:var(--step-1)}"
+    },
+    {
+      "name": "Pause Stamp",
+      "kind": "custom",
+      "description": "Textual stamp paired with the ledger sentence; controls remain fully opaque and operable.",
+      "html": "<div class=\"ds-stamp\">Paused</div>",
+      "css": ".ds-stamp{display:inline-block;padding:3px 10px 2px;border:1.5px solid var(--stamp);border-radius:2px;background:var(--ground);color:var(--stamp);font-family:var(--mono);font-size:var(--step-1);font-weight:700;letter-spacing:.22em;text-transform:uppercase;transform:rotate(-3deg)}"
+    },
+    {
+      "name": "Filed Rule Row",
+      "kind": "custom",
+      "description": "Domain-labeled options row with accessible heading and standard native controls.",
+      "html": "<article class=\"ds-site-rule\" aria-labelledby=\"ds-domain-heading\"><h3 id=\"ds-domain-heading\" class=\"ds-sheet-subject\">example.com</h3><button class=\"ds-remove\" type=\"button\" aria-label=\"Remove rule for example.com\">Remove</button></article>",
+      "css": ".ds-site-rule{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,1.5fr);gap:18px;align-items:start;padding:18px 0;border-bottom:1px solid var(--rule)}.ds-sheet-subject{margin:0;color:var(--ink);font-family:var(--serif);font-size:var(--step-2-up);font-variation-settings:'opsz' 18;overflow-wrap:anywhere}.ds-remove{border:0;background:none;padding:0;color:var(--brass);font-family:var(--serif);font-size:var(--step-0);text-decoration:underline;text-decoration-color:var(--brass-quiet);text-underline-offset:3px;cursor:pointer}.ds-remove:focus-visible{outline:2px solid transparent;outline-offset:2px;box-shadow:var(--focus);border-radius:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reading Room Card Catalog",
+    "overview": "The system is a reading room's card catalog rather than a generated dark-app dashboard: an ink-umber ground, dim parchment sheets, hairline rules, one brass accent, Literata catalog lettering, system mono for measured information, and near-crisp paper forms. It refuses translucent gradient cards, radial glows, glass effects, and equal-weight pills.\n\nThe popup leads with the effective state of the current page. Filing a rule settles its sheet with a brass filing mark; pausing stamps the record instead of washing live controls gray. The warm parchment world still does not match the product's lavender logo; do not smooth over that open identity mismatch.",
+    "keyCharacteristics": [
+      "Flat, layered paper surfaces on an ink-umber ground.",
+      "Serif content paired with mono uppercase catalog legends and measurements.",
+      "Brass reserved for selection, focus, inheritance, and filing feedback.",
+      "Near-crisp corners and visible hairline structure.",
+      "State expressed with words and semantics, never color alone."
+    ],
+    "rules": [
+      { "name": "The One Brass Rule", "body": "Brass marks interaction, focus, inheritance, and filing; it is not a decorative second foreground.", "section": "colors" },
+      { "name": "The Small-Text Floor Rule", "body": "`ink-faint` is the dimmest permitted foreground for small text on resting system surfaces. Never lower its contrast or invent a fainter metadata color.", "section": "colors" },
+      { "name": "The Parchment, Not Glass Rule", "body": "Surfaces are opaque dark parchment with rules. Do not introduce transparency effects, radial glows, or glass cards.", "section": "colors" },
+      { "name": "The Catalog Voice Rule", "body": "Legends are mono uppercase with tracked spacing; content and actions are serif. Do not turn ordinary content into catalog caps.", "section": "typography" },
+      { "name": "The Reading Measure Rule", "body": "Ledger sentences and field notes stop at 64 characters to protect comprehension on wide settings surfaces.", "section": "typography" },
+      { "name": "The Surface Density Rule", "body": "Use standard sheet gaps in the compact popup and section gaps in options. Do not impose options-page breathing room on the popup.", "section": "layout" },
+      { "name": "The Flat Record Rule", "body": "A sheet is defined by tonal layering and a one-pixel rule, not elevation shadow.", "section": "elevation" },
+      { "name": "The Forced-Colors Focus Rule", "body": "Every new press-like control must pair `outline: 2px solid transparent` and `outline-offset: 2px` with the shared box-shadow ring on `:focus-visible`. Forced-colors mode can drop box shadows and reveal the transparent outline, so the outline is required even when visually redundant. Native radios retain a solid inset outline, and the range thumb retains its dedicated ring.", "section": "elevation" },
+      { "name": "The Live Controls Stay Live Rule", "body": "A paused or otherwise out-of-effect state is expressed by the ledger sentence plus the visible `.stamp` element, never by reducing opacity of live controls or their sheet subject. Controls still work while paused, and newly saved rules must remain legible even when not currently in effect. There is no suspended-sheet variant; do not recreate one.", "section": "components" }
+    ],
+    "dos": [
+      "Do build new sheets from the existing sheet, legend, field, spacing, and color patterns.",
+      "Do use native headings, fieldsets, legends, labels, radios, buttons, and ranges with explicit accessible relationships.",
+      "Do apply the Forced-Colors Focus Rule to every new press-like control.",
+      "Do keep small text at `ink-faint` or brighter and keep ledger/field-note prose within 64ch.",
+      "Do express paused/out-of-effect state with the ledger sentence and stamp while keeping controls fully legible.",
+      "Do replay filing feedback only after successful persistence, on the specific sheet or filed-rule row that changed."
+    ],
+    "donts": [
+      "Don't invent colors, spacing, radii, or component aliases; use the complete root token inventory.",
+      "Don't build segmented choices from buttons, spans alone, or `.active` classes.",
+      "Don't use immutable keycap illustrations or assume physical key positions.",
+      "Don't introduce translucent cards, radial glows, glass effects, resting drop shadows, or equal-weight pills.",
+      "Don't add a suspended-sheet opacity state or `aria-pressed` to the pause command.",
+      "Don't constrain the popup's height or create an internal popup scroller; the browser owns both."
+    ]
+  }
+}

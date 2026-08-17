@@ -1,7 +1,10 @@
-import type { BlurScope, RevealMode, SiteOverride } from '../../utils/types';
+import type { ComfortSettings, SiteOverride } from '../../utils/types';
 import { getBaseDomain, getDomain, getSiteOverride } from '../../utils/domain';
 import {
+  getGlobalMediaDefault,
   getSettings,
+  isActiveForSite,
+  isEmojiBlockedForSite,
   onSettingsChange,
   saveSettings,
   setEmojiSiteOverride,
@@ -13,37 +16,34 @@ import { openShortcutSettings } from './browser-support';
 
 const elements = {
   pauseBtn: document.getElementById('pauseBtn') as HTMLButtonElement,
+  ledger: document.getElementById('ledger') as HTMLParagraphElement,
+  ledgerState: document.getElementById('ledgerState') as HTMLSpanElement,
+  ledgerBecause: document.getElementById('ledgerBecause') as HTMLSpanElement,
+  saveNotice: document.getElementById('saveNotice') as HTMLDivElement,
+  siteSheet: document.getElementById('siteSheet') as HTMLElement,
+  globalSheet: document.getElementById('globalSheet') as HTMLElement,
+  revealSheet: document.getElementById('revealSheet') as HTMLElement,
   currentDomain: document.getElementById('currentDomain') as HTMLSpanElement,
-  globalEnabled: document.getElementById('globalEnabled') as HTMLButtonElement,
-  globalDisabled: document.getElementById('globalDisabled') as HTMLButtonElement,
-  siteEnabled: document.getElementById('siteEnabled') as HTMLButtonElement,
-  siteDisabled: document.getElementById('siteDisabled') as HTMLButtonElement,
-  siteDefault: document.getElementById('siteDefault') as HTMLButtonElement,
-  emojiGlobalEnabled: document.getElementById('emojiGlobalEnabled') as HTMLButtonElement,
-  emojiGlobalDisabled: document.getElementById('emojiGlobalDisabled') as HTMLButtonElement,
-  emojiSiteEnabled: document.getElementById('emojiSiteEnabled') as HTMLButtonElement,
-  emojiSiteDisabled: document.getElementById('emojiSiteDisabled') as HTMLButtonElement,
-  emojiSiteDefault: document.getElementById('emojiSiteDefault') as HTMLButtonElement,
-  blurScope: document.getElementById('blurScope') as HTMLSelectElement,
-  revealMode: document.getElementById('revealMode') as HTMLSelectElement,
+  siteMediaSegments: document.getElementById('siteMediaSegments') as HTMLDivElement,
+  siteEmojiSegments: document.getElementById('siteEmojiSegments') as HTMLDivElement,
+  siteMediaNote: document.getElementById('siteMediaNote') as HTMLSpanElement,
+  siteEmojiNote: document.getElementById('siteEmojiNote') as HTMLSpanElement,
   blurAmount: document.getElementById('blurAmount') as HTMLInputElement,
   blurAmountValue: document.getElementById('blurAmountValue') as HTMLSpanElement,
   shortcutsList: document.getElementById('shortcutsList') as HTMLDivElement,
   shortcutHelp: document.getElementById('shortcutHelp') as HTMLDivElement,
   editShortcuts: document.getElementById('editShortcuts') as HTMLButtonElement,
+  openOptions: document.getElementById('openOptions') as HTMLButtonElement,
 };
 
 const shortcutLabels: Record<string, string> = {
-  'toggle-pause': 'Pause Extension',
-  'toggle-site': 'Toggle Site',
+  'toggle-pause': 'Pause extension',
+  'toggle-site': 'Toggle this site',
   'peek-show': 'Peek',
-  'toggle-global': 'Toggle Global Media',
+  'toggle-global': 'Toggle global media',
 };
 
-let currentDomain = '';
-let blurAmountSaveTimer: ReturnType<typeof setTimeout> | null = null;
-
-const SITE_CONTROL_BUTTON_IDS = [
+const SITE_CONTROL_IDS = [
   'siteEnabled',
   'siteDisabled',
   'siteDefault',
@@ -52,185 +52,200 @@ const SITE_CONTROL_BUTTON_IDS = [
   'emojiSiteDefault',
 ] as const;
 
+let currentDomain = '';
+let pauseShortcut = '';
+let blurAmountSaveTimer: number | undefined;
+
+function radios(name: string): HTMLInputElement[] {
+  return Array.from(document.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`));
+}
+
+function selectRadio(name: string, value: string): void {
+  for (const radio of radios(name)) radio.checked = radio.value === value;
+}
+
+function onRadioChange(name: string, handler: (value: string) => void): void {
+  for (const radio of radios(name)) {
+    radio.addEventListener('change', () => {
+      if (radio.checked) handler(radio.value);
+    });
+  }
+}
+
 function setSiteControlsEnabled(enabled: boolean): void {
-  for (const id of SITE_CONTROL_BUTTON_IDS) {
-    const button = document.getElementById(id) as HTMLButtonElement | null;
-    if (button) button.disabled = !enabled;
+  for (const id of SITE_CONTROL_IDS) {
+    const control = document.getElementById(id) as HTMLInputElement | null;
+    if (control) control.disabled = !enabled;
   }
 }
-async function init(): Promise<void> {
-  const settings = await getSettings();
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 
-  currentDomain = tab?.url ? getDomain(tab.url) : '';
-
-  if (currentDomain) {
-    elements.currentDomain.textContent = currentDomain;
-    setSiteControlsEnabled(true);
-  } else {
-    elements.currentDomain.textContent = 'Open on a website';
-    setSiteControlsEnabled(false);
+/** A save that fails silently is a lie about what is in effect. */
+async function persist(action: () => Promise<unknown>): Promise<void> {
+  try {
+    await action();
+    elements.saveNotice.hidden = true;
+  } catch {
+    elements.saveNotice.textContent =
+      'That change could not be saved, so it is not in effect. Try again.';
+    elements.saveNotice.hidden = false;
   }
-
-  updatePauseButton(settings);
-  updateGlobalButtons(settings);
-  updateSiteControls(settings);
-  updateForm(settings);
-  onSettingsChange((nextSettings) => {
-    updatePauseButton(nextSettings);
-    updateGlobalButtons(nextSettings);
-    updateSiteControls(nextSettings);
-    updateForm(nextSettings);
-  });
-
-  elements.pauseBtn.addEventListener('click', async () => {
-    await togglePause();
-  });
-
-  elements.globalEnabled.addEventListener('click', () => setGlobalMediaEnabled(true));
-  elements.globalDisabled.addEventListener('click', () => setGlobalMediaEnabled(false));
-
-  elements.siteEnabled.addEventListener('click', () => handleSiteButton('enabled'));
-  elements.siteDisabled.addEventListener('click', () => handleSiteButton('disabled'));
-  elements.siteDefault.addEventListener('click', () => handleSiteButton('default'));
-
-  elements.emojiGlobalEnabled.addEventListener('click', () => saveSettings({ blockEmojis: true }));
-  elements.emojiGlobalDisabled.addEventListener('click', () => saveSettings({ blockEmojis: false }));
-  elements.emojiSiteEnabled.addEventListener('click', () => handleEmojiSiteButton('enabled'));
-  elements.emojiSiteDisabled.addEventListener('click', () => handleEmojiSiteButton('disabled'));
-  elements.emojiSiteDefault.addEventListener('click', () => handleEmojiSiteButton('default'));
-
-  elements.blurScope.addEventListener('change', () => {
-    saveSettings({ blurScope: elements.blurScope.value as BlurScope });
-  });
-
-  elements.revealMode.addEventListener('change', () => {
-    saveSettings({ revealMode: elements.revealMode.value as RevealMode });
-  });
-
-  elements.blurAmount.addEventListener('input', () => {
-    const blurAmount = Number(elements.blurAmount.value);
-    elements.blurAmountValue.textContent = String(blurAmount);
-
-    if (blurAmountSaveTimer) {
-      clearTimeout(blurAmountSaveTimer);
-    }
-
-    blurAmountSaveTimer = setTimeout(() => {
-      saveSettings({ blurAmount });
-    }, 150);
-  });
-
-  elements.editShortcuts.addEventListener('click', async () => {
-    const message = await openShortcutSettings();
-    elements.shortcutHelp.hidden = !message;
-    elements.shortcutHelp.textContent = message ?? '';
-  });
-  await loadShortcuts();
 }
 
-function updateForm(settings: Awaited<ReturnType<typeof getSettings>>): void {
-  elements.emojiGlobalEnabled.classList.toggle('active', settings.blockEmojis);
-  elements.emojiGlobalDisabled.classList.toggle('active', !settings.blockEmojis);
-  elements.blurScope.value = settings.blurScope;
-  elements.revealMode.value = settings.revealMode;
+function fileCard(sheet: HTMLElement): void {
+  sheet.classList.remove('sheet-filed');
+  // Force a reflow so the animation restarts on a repeated choice.
+  void sheet.offsetWidth;
+  sheet.classList.add('sheet-filed');
+}
+
+function inheritanceSource(
+  overrides: Record<string, SiteOverride>,
+  domain: string
+): 'own' | 'base' | 'global' {
+  if (overrides[domain]) return 'own';
+  const baseDomain = getBaseDomain(domain);
+  if (baseDomain && overrides[baseDomain]) return 'base';
+  return 'global';
+}
+
+function render(settings: ComfortSettings): void {
+  renderPause(settings);
+  renderGlobal(settings);
+  renderSite(settings);
+  renderReveal(settings);
+  renderLedger(settings);
+}
+
+/**
+ * Pause is announced by the button's own label and the ledger sentence, and marked
+ * on the record by a stamp. Nothing is grayed: the controls still work, and a saved
+ * rule stays readable while it is out of effect.
+ */
+function renderPause(settings: ComfortSettings): void {
+  elements.pauseBtn.textContent = settings.paused ? 'Resume' : 'Pause';
+  elements.pauseBtn.classList.toggle('is-engaged', settings.paused);
+
+  const existingStamp = elements.siteSheet.querySelector('.stamp');
+  if (settings.paused && !existingStamp) {
+    const stamp = document.createElement('span');
+    stamp.className = 'stamp';
+    stamp.textContent = 'Paused';
+    elements.siteSheet.appendChild(stamp);
+  } else if (!settings.paused && existingStamp) {
+    existingStamp.remove();
+  }
+}
+
+function renderGlobal(settings: ComfortSettings): void {
+  selectRadio('globalMedia', settings.enabled ? 'enabled' : 'disabled');
+  selectRadio('globalEmoji', settings.blockEmojis ? 'enabled' : 'disabled');
+}
+
+function renderReveal(settings: ComfortSettings): void {
   elements.blurAmount.value = String(settings.blurAmount);
   elements.blurAmountValue.textContent = String(settings.blurAmount);
 }
 
-function updatePauseButton(settings: Awaited<ReturnType<typeof getSettings>>): void {
-  elements.pauseBtn.textContent = settings.paused ? 'Resume' : 'Pause';
-  elements.pauseBtn.classList.toggle('paused', settings.paused);
-}
-
-function updateGlobalButtons(settings: Awaited<ReturnType<typeof getSettings>>): void {
-  elements.globalEnabled.classList.toggle('active', settings.enabled);
-  elements.globalDisabled.classList.toggle('active', !settings.enabled);
-}
-
-function updateSiteControls(settings: Awaited<ReturnType<typeof getSettings>>): void {
-  const siteOverride = getSiteOverride(settings.siteOverrides, currentDomain);
-  const emojiOverride = getSiteOverride(settings.emojiSiteOverrides, currentDomain);
-  const baseDomain = getBaseDomain(currentDomain);
-
-  const siteInheritedFrom =
-    baseDomain && !settings.siteOverrides[currentDomain] && settings.siteOverrides[baseDomain]
-      ? baseDomain
-      : null;
-
-  const emojiInheritedFrom =
-    baseDomain &&
-    !settings.emojiSiteOverrides[currentDomain] &&
-    settings.emojiSiteOverrides[baseDomain]
-      ? baseDomain
-      : null;
-
-  updateSiteButtons(siteOverride, siteInheritedFrom);
-  updateEmojiSiteButtons(emojiOverride, emojiInheritedFrom);
-}
-
-function handleSiteButton(value: SiteOverride): void {
-  if (!currentDomain) return;
-  setSiteOverride(currentDomain, value);
-  updateSiteButtons(value);
-}
-
-function handleEmojiSiteButton(value: SiteOverride): void {
-  if (!currentDomain) return;
-  setEmojiSiteOverride(currentDomain, value);
-  updateEmojiSiteButtons(value);
-}
-
-function updateSiteButtons(active: SiteOverride, inheritedFrom: string | null = null): void {
-  updateTriStateButtons(
-    {
-      enabled: elements.siteEnabled,
-      disabled: elements.siteDisabled,
-      default: elements.siteDefault,
-    },
-    active,
-    inheritedFrom
-  );
-}
-
-function updateEmojiSiteButtons(active: SiteOverride, inheritedFrom: string | null = null): void {
-  updateTriStateButtons(
-    {
-      enabled: elements.emojiSiteEnabled,
-      disabled: elements.emojiSiteDisabled,
-      default: elements.emojiSiteDefault,
-    },
-    active,
-    inheritedFrom
-  );
-}
-
-function updateTriStateButtons(
-  buttons: Record<SiteOverride, HTMLButtonElement>,
-  active: SiteOverride,
-  inheritedFrom: string | null
-): void {
-  for (const [value, button] of Object.entries(buttons) as [SiteOverride, HTMLButtonElement][]) {
-    button.classList.toggle('active', value === active);
-    button.classList.remove('inherited');
-    button.removeAttribute('title');
+function renderSite(settings: ComfortSettings): void {
+  if (!currentDomain) {
+    elements.currentDomain.textContent = 'no site';
+    elements.currentDomain.classList.add('is-empty');
+    setSiteControlsEnabled(false);
+    for (const radio of [...radios('siteMedia'), ...radios('siteEmoji')]) radio.checked = false;
+    elements.siteMediaSegments.classList.remove('is-inherited');
+    elements.siteEmojiSegments.classList.remove('is-inherited');
+    elements.siteMediaNote.textContent = 'Open a website to file a rule for it.';
+    elements.siteEmojiNote.textContent = '';
+    return;
   }
 
-  if (!inheritedFrom) return;
+  elements.currentDomain.textContent = currentDomain;
+  elements.currentDomain.classList.remove('is-empty');
+  setSiteControlsEnabled(true);
 
-  const activeButton = buttons[active];
-  activeButton.classList.add('inherited');
-  activeButton.title = `Inherited from ${inheritedFrom}`;
+  renderSiteField(
+    'siteMedia',
+    elements.siteMediaSegments,
+    elements.siteMediaNote,
+    settings.siteOverrides,
+    getGlobalMediaDefault(settings) === 'enabled' ? 'blurred' : 'shown'
+  );
+  renderSiteField(
+    'siteEmoji',
+    elements.siteEmojiSegments,
+    elements.siteEmojiNote,
+    settings.emojiSiteOverrides,
+    settings.blockEmojis ? 'hidden' : 'shown'
+  );
+}
+
+function renderSiteField(
+  name: string,
+  segments: HTMLElement,
+  note: HTMLElement,
+  overrides: Record<string, SiteOverride>,
+  globalWord: string
+): void {
+  const source = inheritanceSource(overrides, currentDomain);
+  const effective = getSiteOverride(overrides, currentDomain);
+
+  selectRadio(name, source === 'base' ? effective : (overrides[currentDomain] ?? 'default'));
+  segments.classList.toggle('is-inherited', source === 'base');
+
+  if (source === 'base') {
+    const baseDomain = getBaseDomain(currentDomain);
+    note.textContent = `Following the rule filed for ${baseDomain}.`;
+    note.classList.add('field-note-inherited');
+    return;
+  }
+
+  note.classList.remove('field-note-inherited');
+  note.textContent = source === 'own' ? '' : `Global default: ${globalWord}.`;
+}
+
+function renderLedger(settings: ComfortSettings): void {
+  const { ledger, ledgerState, ledgerBecause } = elements;
+  ledger.classList.remove('is-paused', 'is-off');
+
+  if (settings.paused) {
+    ledger.classList.add('is-paused');
+    ledgerState.textContent = 'Paused everywhere.';
+    ledgerBecause.textContent = pauseShortcut
+      ? `Nothing is blurred or hidden. ${pauseShortcut} resumes.`
+      : 'Nothing is blurred or hidden until you resume.';
+    return;
+  }
+
+  if (!currentDomain) {
+    ledger.classList.add('is-off');
+    ledgerState.textContent = 'This page cannot have its own rule.';
+    ledgerBecause.textContent =
+      'Browser and extension pages are out of reach. Everything below still applies to websites.';
+    return;
+  }
+
+  const mediaBlurred = isActiveForSite(settings, currentDomain);
+  const emojiHidden = isEmojiBlockedForSite(settings, currentDomain);
+
+  if (!mediaBlurred) ledger.classList.add('is-off');
+
+  ledgerState.textContent = `Media is ${mediaBlurred ? 'blurred' : 'shown'} on ${currentDomain}.`;
+
+  const mediaSource = inheritanceSource(settings.siteOverrides, currentDomain);
+  const because =
+    mediaSource === 'own'
+      ? 'From this site’s own rule.'
+      : mediaSource === 'base'
+        ? `From the rule filed for ${getBaseDomain(currentDomain)}.`
+        : 'From the global default.';
+
+  ledgerBecause.textContent = `${because} Emoji is ${emojiHidden ? 'hidden' : 'shown'} here.`;
 }
 
 async function loadShortcuts(): Promise<void> {
-  elements.shortcutsList.innerHTML = '';
-  let commands: Array<{
-    name?: string;
-    description?: string;
-    shortcut?: string;
-  }> = [];
+  elements.shortcutsList.replaceChildren();
 
+  let commands: Array<{ name?: string; description?: string; shortcut?: string }> = [];
   try {
     commands = await browser.commands.getAll();
   } catch {
@@ -239,23 +254,20 @@ async function loadShortcuts(): Promise<void> {
 
   for (const command of commands) {
     if (!command.name || !(command.name in shortcutLabels)) continue;
+    if (command.name === 'toggle-pause') pauseShortcut = command.shortcut ?? '';
 
     const item = document.createElement('div');
     item.className = 'shortcut-item';
 
-    const label = shortcutLabels[command.name] || command.description || command.name;
-    const shortcut = command.shortcut || 'Not set';
-    const notSet = !command.shortcut;
+    const name = document.createElement('span');
+    name.className = 'shortcut-name';
+    name.textContent = shortcutLabels[command.name] ?? command.description ?? command.name;
 
-    const nameElement = document.createElement('span');
-    nameElement.className = 'shortcut-name';
-    nameElement.textContent = label;
+    const key = document.createElement('span');
+    key.className = `shortcut-key${command.shortcut ? '' : ' not-set'}`;
+    key.textContent = command.shortcut || 'Not set';
 
-    const keyElement = document.createElement('span');
-    keyElement.className = `shortcut-key${notSet ? ' not-set' : ''}`;
-    keyElement.textContent = shortcut;
-    item.append(nameElement, keyElement);
-
+    item.append(name, key);
     elements.shortcutsList.appendChild(item);
   }
 }
@@ -264,12 +276,75 @@ declare const __BUILD_HASH__: string;
 declare const __BUILD_TIME__: string;
 declare const __BUILD_VERSION__: string;
 declare const __BUILD_PROFILE__: string;
+
+/** The build line is a support tool: it tells a bug report which artifact it saw. */
 function showBuildInfo(): void {
   const element = document.getElementById('buildInfo');
-  if (element) {
-    element.textContent = `v${__BUILD_VERSION__} (${__BUILD_HASH__}) ${__BUILD_TIME__} · ${__BUILD_PROFILE__}`;
-  }
+  if (!element) return;
+
+  const release = document.createElement('span');
+  release.textContent = `v${__BUILD_VERSION__} (${__BUILD_HASH__})`;
+  const stamp = document.createElement('span');
+  stamp.textContent = `${__BUILD_TIME__} · ${__BUILD_PROFILE__}`;
+  element.append(release, stamp);
+}
+
+async function init(): Promise<void> {
+  const settings = await getSettings();
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+
+  currentDomain = tab?.url ? getDomain(tab.url) : '';
+
+  await loadShortcuts();
+  render(settings);
+  onSettingsChange(render);
+
+  elements.pauseBtn.addEventListener('click', () => {
+    void persist(() => togglePause());
+  });
+
+  onRadioChange('globalMedia', (value) => {
+    void persist(() => setGlobalMediaEnabled(value === 'enabled'));
+    fileCard(elements.globalSheet);
+  });
+
+  onRadioChange('globalEmoji', (value) => {
+    void persist(() => saveSettings({ blockEmojis: value === 'enabled' }));
+    fileCard(elements.globalSheet);
+  });
+
+  onRadioChange('siteMedia', (value) => {
+    if (!currentDomain) return;
+    void persist(() => setSiteOverride(currentDomain, value as SiteOverride));
+    fileCard(elements.siteSheet);
+  });
+
+  onRadioChange('siteEmoji', (value) => {
+    if (!currentDomain) return;
+    void persist(() => setEmojiSiteOverride(currentDomain, value as SiteOverride));
+    fileCard(elements.siteSheet);
+  });
+
+  elements.blurAmount.addEventListener('input', () => {
+    const blurAmount = Number(elements.blurAmount.value);
+    elements.blurAmountValue.textContent = String(blurAmount);
+
+    clearTimeout(blurAmountSaveTimer);
+    blurAmountSaveTimer = window.setTimeout(() => {
+      void persist(() => saveSettings({ blurAmount }));
+    }, 150);
+  });
+
+  elements.editShortcuts.addEventListener('click', async () => {
+    const message = await openShortcutSettings();
+    elements.shortcutHelp.hidden = !message;
+    elements.shortcutHelp.textContent = message ?? '';
+  });
+
+  elements.openOptions.addEventListener('click', () => {
+    void browser.runtime.openOptionsPage();
+  });
 }
 
 showBuildInfo();
-init();
+void init();
