@@ -10,18 +10,20 @@ const packageVersion = JSON.parse(fs.readFileSync(new URL('./package.json', impo
 
 function getGitMetadata(): { hash: string; time: string } {
   try {
-    const [hash, time] = execFileSync('git', ['show', '-s', '--format=%h%n%cI', 'HEAD'], {
+    const hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
-    })
-      .trimEnd()
-      .split('\n');
+    }).trim();
 
-    if (!hash || !time) {
+    if (!hash) {
       throw new Error('Git metadata output is incomplete.');
     }
 
-    return { hash, time };
+    // The hash pins the reviewed revision; the timestamp is when THIS artifact
+    // was built, so a freshly built app/extension visibly changes after a
+    // rebuild even when the commit does not. Store-listing reproducibility text
+    // that promised commit-time metadata is updated separately (owner decision).
+    return { hash, time: new Date().toISOString() };
   } catch {
     return { hash: 'unknown', time: 'unknown' };
   }
