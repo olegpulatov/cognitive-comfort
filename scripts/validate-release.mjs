@@ -91,7 +91,6 @@ if (browser === 'firefox') {
 }
 
 const topLevelSources = new Set([
-  'icon_large.png',
   'CONTRIBUTING.md',
   'LICENSE',
   'PRIVACY.md',
@@ -110,10 +109,13 @@ const topLevelSources = new Set([
 function isAllowedSource(sourcePath) {
   if (sourcePath.endsWith('/')) {
     return sourcePath === 'public/'
+      || sourcePath === 'brand/'
+      || sourcePath === 'brand/icon/'
       || ['config/', 'scripts/', 'src/', 'tests/'].some((prefix) => sourcePath.startsWith(prefix));
   }
   if (topLevelSources.has(sourcePath)) return true;
   if (['config/', 'scripts/', 'src/', 'tests/'].some((prefix) => sourcePath.startsWith(prefix))) return true;
+  if (/^brand\/icon\/[^/]+\.svg$/.test(sourcePath)) return true;
   return /^public\/icon-[^/]+\.png$/.test(sourcePath);
 }
 

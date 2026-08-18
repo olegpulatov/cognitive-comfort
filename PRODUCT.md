@@ -75,7 +75,7 @@ Known UX debt to fix, not to preserve: state conveyed only by `.active` styling 
 - Product name: Cognitive Comfort (binding). Current subtitle: "Calm browsing by default."
 - Message hierarchy: calm browsing by default → reveal on your terms → adapt per site → local operation → cross-browser only where release evidence supports it.
 - Voice: plain, precise, non-clinical. Claim guardrails are binding: no medical/therapeutic/neurodivergence-treatment or productivity-outcome claims, no "100% private"/"zero data", no claim that page content is never rewritten (emoji mode wraps text nodes), no claim that every visual is hidden, no unverified store/price availability.
-- Existing icon master: `icon_large.png` (1024×1024 PNG, glossy pale cyan/periwinkle/lilac tile with a stylized eye). No vector source exists. Product UI is dark graphite; the logo and store concepts are pale lavender — the mismatch is a known open problem.
+- Icon masters are authored vectors in `brand/icon/`: `icon.svg` (toolbar and store), `icon-macos.svg` (Safari containing app), `icon-mono.svg` (single-colour). The mark is four media cells on an ink-umber plate — three quieted, the fourth revealed in parchment — in the shipped panel palette, so identity and UI now agree. The old lavender-eye raster (`icon_large.png`) is deleted; it remains on the live Chrome listing until the next submission.
 - Reserved name/artwork policy in `TRADEMARKS.md`.
 
 ## Evidence on Hand
@@ -84,8 +84,8 @@ Known UX debt to fix, not to preserve: state conveyed only by `.active` styling 
 - Positioning and claim guardrails: `../product/positioning.md`; store copy: `../product/store-listings.md`, `../product/store-front.md`; privacy: `PRIVACY.md`.
 - Browser evidence: `../product/release-evidence/2026-07-18-browser-matrix.md` (visible/stable checks incomplete; Safari not release-ready). Manual matrix: `docs/browser-testing.md`.
 - Automated coverage: `tests/e2e/extension.spec.ts` (first-run blur, background images, bare SVG, linked click, pause/resume, shortcut rows, emoji toggle, held peek, console errors).
-- Icon master `icon_large.png` + generated `public/icon-{16,32,48,96,128}.png` via `scripts/generate-icons.sh`. Unreferenced exploratory PNGs in `../internal-docs/` are exploration, not source of truth.
-- Screenshots in `../product/screenshots/` and `../product/screenshots2/` are raster-only, partly mislabeled before/after, contain third-party YouTube UI, and claim unverified store availability — not approved assets, and no editable composition files exist. Two docs point at a nonexistent `product/assets/screenshots/` path.
+- Icon masters `brand/icon/*.svg` + generated `public/icon-{16,32,48,96,128}.png` via `scripts/generate-icons.sh` (`just icons`). Unreferenced exploratory PNGs in `../internal-docs/` are exploration, not source of truth.
+- Store assets are generated in-repo: `brand/store/demo/` (own demonstration page and photography), `scripts/capture-shots.mjs` (real extension in a real browser), `brand/store/copy.json` + `brand/store/templates/asset.html` + `scripts/render-store-assets.mjs` (exact store sizes into `brand/store/out/`). See `brand/README.md`. The older `../product/screenshots/` and `../product/screenshots2/` sets are superseded and must not ship: raster-only, partly mislabeled before/after, third-party YouTube UI, unverified store-availability badges. Two docs still point at a nonexistent `product/assets/screenshots/` path.
 - No customers, testimonials, benchmarks, user counts, or pricing exist. Do not fabricate any.
 
 ## Product Principles

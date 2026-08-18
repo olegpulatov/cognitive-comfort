@@ -4,7 +4,7 @@ The Mozilla Public License 2.0 covers the source code identified by this reposit
 
 The “Cognitive Comfort” name and the following artwork are reserved and are not licensed for use as fork branding:
 
-- `icon_large.png`
+- `brand/icon/*.svg` and every raster rendered from them
 - `public/icon-*.png`
 - store artwork and promotional assets
 

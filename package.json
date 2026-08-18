@@ -33,6 +33,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "BUILD_PROFILE=public pnpm build:chrome && playwright test",
+    "capture:shots": "node scripts/capture-shots.mjs",
     "test:watch": "vitest",
     "postinstall": "wxt prepare",
     "tag": "bash ./scripts/tag-release.sh patch",

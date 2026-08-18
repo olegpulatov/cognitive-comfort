@@ -113,7 +113,7 @@ export default defineConfig({
       'scripts/**',
       'src/**',
       'tests/**',
-      'icon_large.png',
+      'brand/icon/*.svg',
       'CONTRIBUTING.md',
       'LICENSE',
       'PRIVACY.md',

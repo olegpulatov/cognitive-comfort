@@ -43,3 +43,11 @@ safari/
 *.njsproj
 *.sln
 *.sw?
+
+# A common global gitignore rule ("Icon" on macOS) swallows brand/icon — force it back in,
+# then ignore only the renders inside it. Generated brand output is rebuilt by `just brand`.
+!brand/icon/
+brand/store/captures/
+brand/store/out/
+brand/icon/explore/
+brand/icon/icon-1024.png

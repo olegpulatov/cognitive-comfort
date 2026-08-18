@@ -1,105 +1,64 @@
 #!/usr/bin/env bash
 
+# Regenerates every shipped raster icon from the authored vector masters in brand/icon/.
+# Nothing here is a source file: edit the SVGs, then run this script.
+#
+#   brand/icon/icon.svg        browser toolbar + store icons (rounded ink-umber plate)
+#   brand/icon/icon-macos.svg  Safari containing-app icons on Apple's 1024 grid
+#   brand/icon/icon-mono.svg   single-colour variant, not shipped as a raster
+#
+# Requires rsvg-convert (librsvg). Install with: brew install librsvg
+
 set -euo pipefail
 
-SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOURCE_IMAGE="${1:-$SOURCE_DIR/icon_large.png}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WEB_MASTER="${1:-$ROOT_DIR/brand/icon/icon.svg}"
+APP_MASTER="${2:-$ROOT_DIR/brand/icon/icon-macos.svg}"
 
-if [ ! -f "$SOURCE_IMAGE" ]; then
-  echo "Source image not found: $SOURCE_IMAGE" >&2
+for master in "$WEB_MASTER" "$APP_MASTER"; do
+  if [ ! -f "$master" ]; then
+    echo "Vector master not found: $master" >&2
+    exit 1
+  fi
+done
+
+if ! command -v rsvg-convert &>/dev/null; then
+  echo "rsvg-convert is required to render the vector masters (brew install librsvg)." >&2
   exit 1
 fi
 
-resize_png() {
-  local size="$1"
-  local output="$2"
+render() {
+  local master="$1" size="$2" output="$3"
 
   mkdir -p "$(dirname "$output")"
-  sips -z "$size" "$size" "$SOURCE_IMAGE" --out "$output" >/dev/null
+  rsvg-convert --width "$size" --height "$size" --keep-aspect-ratio "$master" --output "$output"
 }
 
-require_magick() {
-  if ! command -v magick &>/dev/null; then
-    echo "ImageMagick ('magick') is required to generate Apple app icons from transparent artwork." >&2
-    exit 1
-  fi
-}
+# Browser extension icons and the 1024 store/press master.
+for size in 16 32 48 96 128; do
+  render "$WEB_MASTER" "$size" "$ROOT_DIR/public/icon-$size.png"
+done
+render "$WEB_MASTER" 1024 "$ROOT_DIR/brand/icon/icon-1024.png"
 
-compose_apple_icon() {
-  local size="$1"
-  local output="$2"
+# Edge store logo.
+render "$WEB_MASTER" 300 "$ROOT_DIR/brand/store/out/edge-store-logo-300.png"
 
-  mkdir -p "$(dirname "$output")"
-  local tmp_square
-  tmp_square="$(mktemp /tmp/apple-icon-square-XXXXXX.png)"
-
-  local bounds
-  bounds="$(magick "$SOURCE_IMAGE" -alpha extract -threshold 20% -format '%@' info:)"
-
-  local width height x y
-  width="${bounds%%x*}"
-  local rest="${bounds#*x}"
-  height="${rest%%+*}"
-  rest="${rest#*+}"
-  x="${rest%%+*}"
-  y="${rest#*+}"
-
-  local cx cy side crop_x crop_y max_x max_y
-  cx=$(( x + width / 2 ))
-  cy=$(( y + height / 2 ))
-  side=$(( (width > height ? width : height) * 128 / 100 ))
-  crop_x=$(( cx - side / 2 ))
-  crop_y=$(( cy - side / 2 ))
-  max_x=$(( 1024 - side ))
-  max_y=$(( 1024 - side ))
-
-  if (( crop_x < 0 )); then crop_x=0; fi
-  if (( crop_y < 0 )); then crop_y=0; fi
-  if (( crop_x > max_x )); then crop_x=max_x; fi
-  if (( crop_y > max_y )); then crop_y=max_y; fi
-
-  magick "$SOURCE_IMAGE" \
-    -crop "${side}x${side}+${crop_x}+${crop_y}" \
-    +repage \
-    -resize "${size}x${size}" \
-    "$tmp_square"
-
-  magick \
-    -size "${size}x${size}" xc:none \
-    "$tmp_square" \
-    -gravity center \
-    -compose over -composite \
-    "$output"
-
-  rm -f "$tmp_square"
-}
-
-# Browser extension icons (keep transparency)
-resize_png 16 "$SOURCE_DIR/public/icon-16.png"
-resize_png 32 "$SOURCE_DIR/public/icon-32.png"
-resize_png 48 "$SOURCE_DIR/public/icon-48.png"
-resize_png 96 "$SOURCE_DIR/public/icon-96.png"
-resize_png 128 "$SOURCE_DIR/public/icon-128.png"
-
-# Safari/macOS app icons
-SAFARI_APP_DIR="$SOURCE_DIR/safari/Cognitive Comfort/Shared (App)"
+# Safari/macOS containing-app icons.
+SAFARI_APP_DIR="$ROOT_DIR/safari/Cognitive Comfort/Shared (App)"
 if [ -d "$SAFARI_APP_DIR" ]; then
-  require_magick
-
-  compose_apple_icon 128 "$SAFARI_APP_DIR/Resources/Icon.png"
-  compose_apple_icon 128 "$SAFARI_APP_DIR/Assets.xcassets/LargeIcon.imageset/icon-128.png"
-
-  compose_apple_icon 16 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-16@1x.png"
-  compose_apple_icon 32 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-16@2x.png"
-  compose_apple_icon 32 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-32@1x.png"
-  compose_apple_icon 64 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-32@2x.png"
-  compose_apple_icon 128 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-128@1x.png"
-  compose_apple_icon 256 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-128@2x.png"
-  compose_apple_icon 256 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-256@1x.png"
-  compose_apple_icon 512 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-256@2x.png"
-  compose_apple_icon 512 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-512@1x.png"
-  compose_apple_icon 1024 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-512@2x.png"
-  compose_apple_icon 1024 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/universal-icon-1024@1x.png"
+  render "$APP_MASTER" 128 "$SAFARI_APP_DIR/Resources/Icon.png"
+  render "$APP_MASTER" 128 "$SAFARI_APP_DIR/Assets.xcassets/LargeIcon.imageset/icon-128.png"
+  render "$APP_MASTER" 16 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-16@1x.png"
+  render "$APP_MASTER" 32 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-16@2x.png"
+  render "$APP_MASTER" 32 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-32@1x.png"
+  render "$APP_MASTER" 64 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-32@2x.png"
+  render "$APP_MASTER" 128 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-128@1x.png"
+  render "$APP_MASTER" 256 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-128@2x.png"
+  render "$APP_MASTER" 256 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-256@1x.png"
+  render "$APP_MASTER" 512 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-256@2x.png"
+  render "$APP_MASTER" 512 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-512@1x.png"
+  render "$APP_MASTER" 1024 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/mac-icon-512@2x.png"
+  render "$APP_MASTER" 1024 "$SAFARI_APP_DIR/Assets.xcassets/AppIcon.appiconset/universal-icon-1024@1x.png"
 fi
 
-echo "Generated icons from $SOURCE_IMAGE"
+echo "Rendered icons from $WEB_MASTER and $APP_MASTER"

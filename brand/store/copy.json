@@ -1,0 +1,76 @@
+{
+  "$comment": "Single source of truth for every store asset's words and size. Edit here, then run `node scripts/render-store-assets.mjs`. Claims must stay inside PRODUCT.md's guardrails: no store-availability badges, no medical or productivity claims, no absolutes about privacy.",
+  "wordmark": "Cognitive Comfort",
+  "assets": [
+    {
+      "id": "chrome-marquee-1400x560",
+      "kind": "marquee",
+      "width": 1400,
+      "height": 560,
+      "store": "Chrome Web Store marquee promo tile",
+      "headline": "Read first.\nLook when you decide.",
+      "caption": "Distracting web media is blurred and dimmed in place until you reveal it.",
+      "capture": "captures/popup-default.png"
+    },
+    {
+      "id": "chrome-tile-440x280",
+      "kind": "tile",
+      "width": 440,
+      "height": 280,
+      "store": "Chrome Web Store small promo tile",
+      "headline": "Calm browsing by default.",
+      "caption": "Blur web media until you reveal it."
+    },
+    {
+      "id": "shot-1-quiet-page-1280x800",
+      "kind": "shot",
+      "width": 1280,
+      "height": 800,
+      "store": "Store screenshot 1",
+      "headline": "Media arrives quiet.",
+      "caption": "Images, video, canvases, and eligible background images are blurred and dimmed in place — never removed.",
+      "capture": "captures/page-hidden.png"
+    },
+    {
+      "id": "shot-2-reveal-1280x800",
+      "kind": "shot",
+      "width": 1280,
+      "height": 800,
+      "store": "Store screenshot 2",
+      "headline": "Reveal one thing, on your own gesture.",
+      "caption": "Click, hover, hover with click-to-lock, or hold the peek shortcut. Everything else on the page stays quiet.",
+      "capture": "captures/page-revealed.png"
+    },
+    {
+      "id": "shot-3-popup-1280x800",
+      "kind": "shot-portrait",
+      "width": 1280,
+      "height": 800,
+      "store": "Store screenshot 3",
+      "headline": "The popup leads with what is actually happening.",
+      "caption": "Effective state first: this page, the rule it follows, and which rule it inherits from.",
+      "capture": "captures/popup-default.png",
+      "captureSecondary": "captures/popup-site-rule.png"
+    },
+    {
+      "id": "shot-4-options-1280x800",
+      "kind": "shot",
+      "width": 1280,
+      "height": 800,
+      "store": "Store screenshot 4",
+      "headline": "Per-site rules, filed and editable.",
+      "caption": "Global default, per-domain overrides, blur strength, reveal mode, and emoji presentation. Settings and overrides stay in browser-local storage.",
+      "capture": "captures/options-rules.png"
+    },
+    {
+      "id": "shot-5-paused-1280x800",
+      "kind": "shot-portrait",
+      "width": 1280,
+      "height": 800,
+      "store": "Store screenshot 5",
+      "headline": "Pause is stated, not implied.",
+      "caption": "Paused everywhere is stamped on the record, and every control stays usable while it is paused.",
+      "capture": "captures/popup-paused.png"
+    }
+  ]
+}

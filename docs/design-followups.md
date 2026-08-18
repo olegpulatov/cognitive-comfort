@@ -48,20 +48,28 @@ Current treatment is `blur(Npx) brightness(0.3)` with a 0.2s transition (`comfor
 
 Acceptance: a before/after comparison on five real pages, then either a change with the tests updated or a written decision to keep it as is.
 
-## 5. Identity: icon and name
+## 5. Identity: icon (done 2026-08-18) and name
 
-Deliberately not touched this session. Recorded so the decision is not lost:
+The icon was redrawn. `icon_large.png` is deleted; the masters are `brand/icon/icon.svg` (toolbar and store), `brand/icon/icon-macos.svg` (Safari containing app on Apple's 1024 grid), and `brand/icon/icon-mono.svg` (single-colour, `currentColor`). `scripts/generate-icons.sh` renders every shipped raster from them with `rsvg-convert`; `just icons` is the entry point. `wxt.config.ts` and `scripts/validate-release.mjs` now allow `brand/icon/*.svg` in the Firefox sources ZIP in place of the old raster master.
 
-- The shipped icon (`icon_large.png`, raster only, no vector master) is a glossy pale cyan/lilac eye with sparkles. It has three separate problems: it does not survive 16px (sparkles and inner contours compress into mush), it has no editable source, and it now clashes with the panel world, which is warm ink and brass.
-- Wanting a lavender-free identity is a reasonable instinct: pale lilac gradients read as generated because they are the default of every image model. That is a reason to redraw, not a reason to panic.
-- Minimum viable fix, if a full rebrand is not wanted: an authored vector master, one silhouette that reads at 16px, a monochrome variant, and a warm palette that agrees with the UI. Test at 16/32/128 on light and dark toolbars before shipping.
-- The name "Cognitive Comfort" is recorded as binding in `PRODUCT.md`. It is descriptive, unusual enough to be searchable, and free of medical claims. If it is ever revisited, the technical identities in the handoff's rename map stay frozen regardless.
+The mark is four media cells on an ink-umber plate: three quieted, the fourth revealed in parchment with its form crisp. It carries the panel palette, has no interior linework, and was checked at 16/32/48/128 on light and dark toolbars before shipping. See `brand/README.md`.
 
-## 6. Store assets
+Still open on identity:
 
-`../product/screenshots2/` cannot ship as-is: some concepts label before/after backwards, several claim availability on stores that are not verified live, all are raster-only so renamed copy means recreating art, and they contain third-party YouTube UI whose rights are unreviewed.
+- The name "Cognitive Comfort" stays binding (`PRODUCT.md`). If it is ever revisited, the technical identities in the handoff's rename map stay frozen regardless.
+- Nothing has been resubmitted to any store yet, so the live Chrome listing still shows the old lavender eye until the next submission.
 
-Build a reproducible template instead: a real page in a real browser, the new popup beside it, one honest caption per shot, and a script that regenerates all sizes so copy changes cost nothing. Add per-store size sets from the checklist. Never claim a store before the listing is live.
+## 6. Store assets (done 2026-08-18)
+
+`../product/screenshots2/` is superseded and must not ship: reversed before/after labels, unverified store-availability badges, raster-only art, and third-party YouTube UI.
+
+The replacement is reproducible and lives in the repo:
+
+- `brand/store/demo/` — a media-dense demonstration page ("The Marginalia Review") built from our own prose, our own generated photographs, and a locally painted canvas player. No third-party interface or imagery.
+- `scripts/capture-shots.mjs` (`just captures`) — builds the extension, runs it in a real Chromium profile, serves the demo page over a routed `https://example.com/` URL, and captures the page hidden and revealed, three popup states, and the options page. `brand/store/captures/manifest.json` records sizes and the single documented harness detail: the popup's active-tab lookup is pinned to the demo URL, because a scripted tab render is always its own active tab. Settings, rules, ledger sentences, and stamps are real.
+- `brand/store/copy.json` + `brand/store/templates/asset.html` + `scripts/render-store-assets.mjs` (`just store-assets`) — every headline, caption, store target, and pixel size in one JSON, rendered at exact store dimensions into `brand/store/out/`. A copy change costs a re-render.
+
+Shipped set: Chrome marquee 1400×560, Chrome small tile 440×280, five 1280×800 screenshots, Edge store logo 300×300. Remaining before submission: confirm each vendor's current required size set from the release checklist, and add any missing sizes to `copy.json` rather than resizing exports by hand.
 
 ## 7. Options page reachability
 

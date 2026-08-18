@@ -33,8 +33,21 @@ clean:
 safari-project: _install
     BUILD_PROFILE={{ BUILD_PROFILE }} pnpm safari:project
 
-icons source="icon_large.png":
-    bash ./scripts/generate-icons.sh {{ source }}
+# Re-render every shipped icon from the vector masters in brand/icon/.
+icons:
+    bash ./scripts/generate-icons.sh
+
+# Capture the popup, options, and demo page from a real browser running the built extension.
+captures: _install
+    node ./scripts/capture-shots.mjs
+
+# Compose store screenshots and promo tiles from brand/store/copy.json. Pass id filters: just store-assets marquee
+store-assets *filters: _install
+    node ./scripts/render-store-assets.mjs {{ filters }}
+
+# Icons, fresh captures, then every store asset.
+brand: icons captures store-assets
+    @echo "Brand assets rebuilt in brand/icon and brand/store/out."
 
 # Zip one target: just zip chrome
 zip browser="chromium": _install

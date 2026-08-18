@@ -1,0 +1,13 @@
+<!--
+  Cognitive Comfort — single-colour variant for template/monochrome contexts
+  (Safari toolbar templates, print, favicons on unknown grounds, docs marks).
+  currentColor drives every shape; quieted cells are outlined, the revealed cell filled.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="currentColor" role="img" aria-label="Cognitive Comfort">
+  <g fill="none" stroke="currentColor" stroke-width="7">
+    <rect x="27.5" y="27.5" width="29" height="29" rx="3"/>
+    <rect x="71.5" y="27.5" width="29" height="29" rx="3"/>
+    <rect x="27.5" y="71.5" width="29" height="29" rx="3"/>
+  </g>
+  <path fill-rule="evenodd" d="M68 68 h36 v36 h-36 Z M86 96 a10 10 0 1 0 0 -20 a10 10 0 0 0 0 20 Z"/>
+</svg>

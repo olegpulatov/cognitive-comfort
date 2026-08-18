@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Marginalia Review — Field notes</title>
+<!--
+  Demonstration page for store screenshots and manual QA. Not a real publication:
+  the name, prose, and photographs are ours, generated for this purpose, so the
+  before/after captures contain no third-party interface or imagery. It is styled
+  as an ordinary media-dense reading page on purpose — deliberately unlike the
+  extension's own surfaces, which are the dark parchment panels.
+  Served over a routed https://example.com/ URL by scripts/capture-shots.mjs.
+-->
+<style>
+  :root {
+    --page: #ffffff;
+    --page-alt: #f4f2ee;
+    --text: #17181a;
+    --text-quiet: #5b5f66;
+    --line: #dcd9d3;
+    --link: #1e4fa3;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --serif: Georgia, 'Times New Roman', serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--page);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.55;
+  }
+
+  header.masthead {
+    border-bottom: 1px solid var(--line);
+    padding: 14px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 28px;
+  }
+  .masthead strong { font-family: var(--serif); font-size: 21px; letter-spacing: -0.01em; }
+  .masthead nav { display: flex; gap: 20px; font-size: 14px; color: var(--text-quiet); }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 34px 32px 60px; }
+
+  .lede { display: grid; grid-template-columns: 1.15fr 1fr; gap: 34px; align-items: start; }
+  h1 { font-family: var(--serif); font-size: 44px; line-height: 1.08; letter-spacing: -0.02em; }
+  .byline { margin-top: 14px; font-size: 13px; color: var(--text-quiet); }
+  .lede p { margin-top: 18px; font-family: var(--serif); font-size: 19px; color: #2c2e32; }
+
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; background: var(--page-alt); }
+  figcaption { margin-top: 8px; font-size: 12px; color: var(--text-quiet); }
+
+  .body-copy { margin-top: 34px; column-count: 2; column-gap: 40px; font-family: var(--serif); font-size: 16px; }
+  .body-copy p + p { margin-top: 14px; }
+
+  .video-row { margin-top: 38px; display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
+  .video-row .frame { position: relative; background: #111; }
+  .video-row canvas { display: block; width: 100%; height: auto; }
+  .video-row .stamp {
+    position: absolute; right: 8px; bottom: 8px;
+    background: rgba(0, 0, 0, 0.78); color: #fff;
+    font-size: 12px; padding: 2px 6px; border-radius: 2px;
+  }
+  .video-row h2, .grid h2 { font-family: var(--serif); font-size: 22px; margin-bottom: 12px; }
+  .video-row ul { list-style: none; font-size: 14px; }
+  .video-row li { border-bottom: 1px solid var(--line); padding: 9px 0; color: var(--text-quiet); }
+
+  .grid { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 22px; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .cards a { text-decoration: none; color: inherit; }
+  .cards img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+  .cards a:nth-child(3) img { object-position: 70% center; }
+  .cards a:nth-child(4) img { object-position: 12% 22%; }
+  .cards h3 { font-family: var(--serif); font-size: 15px; margin-top: 9px; font-weight: 600; }
+  .cards span { font-size: 12px; color: var(--text-quiet); }
+
+</style>
+</head>
+<body>
+<header class="masthead">
+  <strong>The Marginalia Review</strong>
+  <nav><span>Field notes</span><span>Workshops</span><span>Letters</span><span>Archive</span></nav>
+</header>
+
+<main>
+  <section class="lede">
+    <div>
+      <h1>Notes from a market that keeps its own hours</h1>
+      <p class="byline">Field notes · demonstration page for Cognitive Comfort</p>
+      <p>The stalls open before the light does, and by the time the aisle fills the day already has a rhythm 🍊 that nobody wrote down.</p>
+    </div>
+    <figure>
+      <a href="https://example.com/market"><img src="media/market.webp" alt="Market hall aisle" width="1200" height="800"></a>
+      <figcaption>The east aisle, mid-afternoon.</figcaption>
+    </figure>
+  </section>
+
+  <section class="grid">
+    <h2>More from the archive</h2>
+    <div class="cards">
+      <a href="https://example.com/lake"><img src="media/lake.webp" alt="Alpine lake"><h3>Water over pale stones</h3><span>Field notes</span></a>
+      <a href="https://example.com/bench"><img src="media/bench.webp" alt="Workshop bench"><h3>The bench, from above</h3><span>Workshops</span></a>
+      <a href="https://example.com/market-2"><img src="media/market.webp" alt="Market hall"><h3>Hours kept by habit</h3><span>Letters</span></a>
+      <a href="https://example.com/bench-2"><img src="media/bench.webp" alt="Copper wire on a bench"><h3>Copper, uncoiled</h3><span>Archive</span></a>
+    </div>
+  </section>
+  <div class="body-copy">
+    <p>Reading a page like this one is mostly a matter of deciding what to ignore. The prose sits between a photograph, a video card, and a grid of things you have not asked for yet — each of them competing for the same second of attention.</p>
+    <p>That competition is the thing being demonstrated here. Nothing on this page is removed; everything is still one gesture away 📷 whenever you decide it is worth looking at.</p>
+    <p>Below the fold there is more of the same: a player frame, a list of related notes, and four cards whose thumbnails are doing most of the arguing.</p>
+    <p>The text stays where it is. That is the entire point of the arrangement.</p>
+  </div>
+
+  <section class="video-row">
+    <figure>
+      <div class="frame">
+        <canvas id="player" width="1200" height="675"></canvas>
+        <span class="stamp">12:04</span>
+      </div>
+      <figcaption>Player frame, drawn locally on a canvas.</figcaption>
+    </figure>
+    <div>
+      <h2>Related notes</h2>
+      <ul>
+        <li>A bench, photographed from directly above</li>
+        <li>What a lake sounds like before eight</li>
+        <li>Three crates of oranges and a ledger</li>
+        <li>On keeping the aisle clear</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // A canvas the extension treats as content media, painted locally so the page
+  // never depends on a network fetch or third-party player.
+  const canvas = document.getElementById('player');
+  const ctx = canvas.getContext('2d');
+  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  sky.addColorStop(0, '#2c3f57');
+  sky.addColorStop(1, '#8ba0ad');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#1d2a20';
+  for (let x = -40; x < canvas.width + 40; x += 46) {
+    const height = 150 + Math.abs(Math.sin(x / 190)) * 190;
+    ctx.beginPath();
+    ctx.moveTo(x, canvas.height);
+    ctx.lineTo(x + 23, canvas.height - height);
+    ctx.lineTo(x + 46, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+  ctx.beginPath();
+  ctx.moveTo(canvas.width / 2 - 34, canvas.height / 2 - 42);
+  ctx.lineTo(canvas.width / 2 + 44, canvas.height / 2);
+  ctx.lineTo(canvas.width / 2 - 34, canvas.height / 2 + 42);
+  ctx.closePath();
+  ctx.fill();
+</script>
+</body>
+</html>
