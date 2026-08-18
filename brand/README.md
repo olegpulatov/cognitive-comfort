@@ -22,11 +22,39 @@ just icons   # or: bash scripts/generate-icons.sh
 ```
 
 That writes `public/icon-{16,32,48,96,128}.png`, `brand/icon/icon-1024.png`,
-`brand/store/out/edge-store-logo-300.png`, and the Safari app icon set when
-`../safari/` is present. Requires `rsvg-convert` (`brew install librsvg`).
+`brand/store/out/edge-store-logo-300.png`, and — when `safari/` exists, which
+`scripts/prepare-safari.sh` creates and `.gitignore` excludes — the Safari containing-app
+icon set. Requires `rsvg-convert` (`brew install librsvg`).
 
 Check any icon change at 16px on both a light and a dark toolbar before shipping — that
 is the size that kills detail, and it is why the mark has no interior linework.
+
+### Which file to hand to which surface
+
+There is one mark and three masters; you never choose between designs, only between
+canvases. Everything below comes from `just icons` — do not upload a file you resized
+by hand.
+
+| Where | Upload / reference | Why this one |
+| --- | --- | --- |
+| Extension manifest, every Chromium browser and Firefox | `public/icon-{16,32,48,96,128}.png` | Already wired in `wxt.config.ts`; nothing to do but rebuild. |
+| Chrome Web Store listing icon | `public/icon-128.png` | The store's required 128×128. |
+| Chrome Web Store promo tile / marquee | `brand/store/out/chrome-tile-440x280.png`, `chrome-marquee-1400x560.png` | Composed art, not the bare icon. |
+| Edge Add-ons store logo | `brand/store/out/edge-store-logo-300.png` | Edge asks for 300×300. |
+| Firefox AMO listing icon | `brand/icon/icon.svg` | AMO accepts SVG; give it the vector so it stays sharp at every size AMO renders. |
+| Safari containing app, App Store | generated Safari icon set from `brand/icon/icon-macos.svg` | Apple does not mask app icons, so the plate is inset on Apple's 1024 grid. |
+| README, docs, a site favicon | `brand/icon/icon.svg` | Vector, ships with the repo. |
+| One-colour contexts: print, a template toolbar, an inline docs mark | `brand/icon/icon-mono.svg` | Inherits `currentColor`. |
+
+## What lives here, and what stays private
+
+This directory is public on purpose: masters, the demonstration page, the copy, and the
+generators. Anything that is an account, a credential, a listing draft, a business
+decision, or a superseded experiment belongs in the private parent repository instead —
+including the old `../product/screenshots*/` sets, which must never ship.
+
+The line is simple: if a contributor needs it to rebuild an asset, it is here; if only the
+publisher needs it to submit one, it is private.
 
 ## Store assets
 
