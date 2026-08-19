@@ -103,6 +103,39 @@ async function assertControlHasFocusRing(locator: Locator): Promise<void> {
   expect(hasFocus).toBe(true);
 }
 
+interface BrowserActionState {
+  title: string;
+  badgeText: string;
+  badgeColor: number[];
+}
+
+async function getActiveTabBrowserActionState(env: TestEnv): Promise<BrowserActionState> {
+  await env.page.bringToFront();
+  const worker = env.context.serviceWorkers()[0] ?? await env.context.waitForEvent('serviceworker');
+
+  return worker.evaluate(async () => {
+    const api = (globalThis as unknown as {
+      chrome: {
+        tabs: { query: (details: { active: boolean; currentWindow: boolean }) => Promise<Array<{ id?: number }>> };
+        action: {
+          getTitle: (details: { tabId: number }) => Promise<string>;
+          getBadgeText: (details: { tabId: number }) => Promise<string>;
+          getBadgeBackgroundColor: (details: { tabId: number }) => Promise<number[]>;
+        };
+      };
+    }).chrome;
+    const [tab] = await api.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id === undefined) throw new Error('No active tab available for browser-action assertion.');
+
+    const [title, badgeText, badgeColor] = await Promise.all([
+      api.action.getTitle({ tabId: tab.id }),
+      api.action.getBadgeText({ tabId: tab.id }),
+      api.action.getBadgeBackgroundColor({ tabId: tab.id }),
+    ]);
+    return { title, badgeText, badgeColor };
+  });
+}
+
 test.describe('Chromium Extension Acceptance Suite', () => {
   test('1. Content script media blur, cursor affordance, hover reveal, and peek shortcut', async () => {
     const env = await createTestEnv();
@@ -220,20 +253,16 @@ test.describe('Chromium Extension Acceptance Suite', () => {
       await expect(popup.locator('#pauseBtn')).toHaveText('Resume');
       await expect(popup.locator('#ledgerState')).toHaveText('Paused everywhere.');
       await expect(popup.locator('#siteSheet .stamp')).toBeVisible();
-      await expect(popup.locator('#globalSheet')).toHaveClass(/is-suspended/);
-      await expect(popup.locator('#revealSheet')).toHaveClass(/is-suspended/);
 
       // Media is unblurred on page while paused
       const normalImage = env.page.locator('#normal-image');
       await expect.poll(() => normalImage.evaluate((el) => getComputedStyle(el).filter))
         .toBe('none');
 
-      // Resume restores blur and clears suspension
+      // Resume restores blur and clears the pause stamp
       await popup.locator('#pauseBtn').click();
       await expect(popup.locator('#pauseBtn')).toHaveText('Pause');
       await expect(popup.locator('#siteSheet .stamp')).toHaveCount(0);
-      await expect(popup.locator('#globalSheet')).not.toHaveClass(/is-suspended/);
-      await expect(popup.locator('#revealSheet')).not.toHaveClass(/is-suspended/);
       await expect.poll(() => normalImage.evaluate((el) => getComputedStyle(el).filter))
         .toContain('blur(50px)');
 
@@ -452,11 +481,41 @@ test.describe('Chromium Extension Acceptance Suite', () => {
       // Verify pause interactions work cleanly
       await popup.locator('#pauseBtn').click();
       await expect(popup.locator('#pauseBtn')).toHaveText('Resume');
-      await expect(popup.locator('#globalSheet')).toHaveClass(/is-suspended/);
-
       await popup.locator('#pauseBtn').click();
       await expect(popup.locator('#pauseBtn')).toHaveText('Pause');
-      await expect(popup.locator('#globalSheet')).not.toHaveClass(/is-suspended/);
+
+      expect(env.errors).toEqual([]);
+    } finally {
+      await destroyTestEnv(env);
+    }
+  });
+
+  test('10. Browser action reflects active, paused, and global-show states', async () => {
+    const env = await createTestEnv();
+    try {
+      // Without an activeTab grant, Chrome intentionally withholds the tab URL;
+      // the action still reports the global active state.
+      await expect.poll(() => getActiveTabBrowserActionState(env)).toEqual({
+        title: 'Cognitive Comfort — Active',
+        badgeText: '',
+        badgeColor: [0, 0, 0, 0],
+      });
+
+      const popup = await openPopup(env, fixtureUrl);
+      await popup.locator('#pauseBtn').click();
+      await expect.poll(() => getActiveTabBrowserActionState(env)).toEqual({
+        title: 'Cognitive Comfort — Paused',
+        badgeText: '⏸',
+        badgeColor: [196, 112, 90, 255],
+      });
+
+      await popup.locator('#pauseBtn').click();
+      await popup.locator('#globalDisabled').click();
+      await expect.poll(() => getActiveTabBrowserActionState(env)).toEqual({
+        title: 'Cognitive Comfort — Media shown globally',
+        badgeText: '○',
+        badgeColor: [141, 114, 64, 255],
+      });
 
       expect(env.errors).toEqual([]);
     } finally {

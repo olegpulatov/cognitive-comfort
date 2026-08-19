@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const fixtureDir = path.dirname(fileURLToPath(import.meta.url));
 const outputDir = path.resolve(fixtureDir, '..', '..', '.output', 'chrome-mv3');
 const port = Number(process.env.E2E_PORT || 4177);
-const host = process.env.HOST || '0.0.0.0';
+const host = process.env.HOST || '127.0.0.1';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -46,7 +46,7 @@ const server = createServer(async (request, response) => {
   // load the packed popup.html and its chunks from here.
   const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '');
   const filePath = path.resolve(outputDir, rel);
-  if (filePath.startsWith(outputDir)) {
+  if (filePath === outputDir || filePath.startsWith(`${outputDir}${path.sep}`)) {
     try {
       const data = await readFile(filePath);
       response.writeHead(200, {

@@ -24,13 +24,13 @@ Repeat every row in Chrome, Edge, Firefox, and Safari.
 | --- | --- |
 | Normal image | Computed filter contains `blur(50px)` under the public profile. |
 | CSS backgrounds | Initial and dynamically inserted background fixtures receive `data-comfort-bg-image` and blur. |
-| Small bare SVG | Remains visible in content scope; blurs in 'all' scope. |
-| Linked media | First activation reveals the linked cluster without navigation; second activation navigates to `#linked-destination`. |
+| Small bare SVG | Blurs under the public all-media scope; remains visible after switching to content scope. |
+| Linked media | Under Hover + Click Lock, hover reveals and activation follows the link. Under Click Only, the first activation reveals without navigation and the second follows the link. |
 | Pause / Resume | Pause removes media blur; Resume restores it. |
 | Per-site media override | Show disables blur for `127.0.0.1`; Global restores inherited behavior. |
 | Emoji controls | Enabling emoji hiding changes emoji presentation but not media state; editable emoji text remains visible. |
 | Reveal modes | Click, Hover, and Hover + Click Lock each match their labels and clear stale reveal state when changed. |
-| Peek | Control+Shift+A reveals media while held, then restores blur after release. |
+| Peek | The browser's current Peek assignment reveals media while held, then restores blur after release. The suggested default is Control+Shift+A and may be changed or unset. |
 | Shortcut settings | Popup Edit control opens the browser's extension-shortcut settings or shows the documented manual path. |
 | Persistence | Global defaults and site overrides survive browser restart. |
 | Diagnostics | Fixture, popup, background, and browser consoles contain no errors. |
@@ -47,4 +47,4 @@ Also inspect normal/small/linked images, video, canvas, iframe, SVG, nested medi
 
 ## Automation boundary
 
-`just test-e2e` builds the public Chrome artifact and uses Playwright's Chromium persistent context to cover extension behavior. Chrome receives this automated smoke plus a real stable-browser pass. Edge receives the same automated artifact assertions plus a real Edge smoke. Playwright cannot load the Firefox or Safari extensions, so both require real-browser manual smoke. No automated result is evidence of a store submission.
+`just test-e2e` builds the public Chrome artifact, runs 10 Chromium extension acceptance tests, and runs 11 complementary WebKit engine regressions. Chrome receives this automated smoke plus a real stable-browser pass. Edge receives the same artifact assertions plus a real Edge smoke. Playwright does not load the Firefox or Safari extension artifacts, so both require real-browser manual smoke. No automated result is evidence of a store submission.

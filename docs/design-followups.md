@@ -8,23 +8,23 @@ The Playwright e2e suite (`tests/e2e/extension.spec.ts` and `tests/e2e/webkit-sa
 
 1. **Effective state ledger** - verified in `tests/e2e/extension.spec.ts` (test 2): initial state attributes to global default (`Media is blurred on 127.0.0.1. From the global default.`); setting site rule to `disabled` immediately reflects site own rule attribution (`Media is shown on 127.0.0.1. From this site’s own rule.`) and unblurs fixture media.
 2. **Inheritance** - verified in `tests/e2e/extension.spec.ts` (test 3): base domain `example.com` rule is inherited on subdomain `blog.example.com`; note confirms `Following the rule filed for example.com.` and `#siteMediaSegments` carries `.is-inherited`.
-3. **Pause honesty** - verified in `tests/e2e/extension.spec.ts` (test 4): while paused, `#pauseBtn` renders `Resume`, ledger reads `Paused everywhere.`, `#siteSheet` renders `.stamp` ("Paused"), policy sheets (`#globalSheet`, `#revealSheet`) receive `.is-suspended`, and controls remain operable.
+3. **Pause honesty** - verified in `tests/e2e/extension.spec.ts` (test 4): while paused, `#pauseBtn` renders `Resume`, the ledger reads `Paused everywhere.`, `#siteSheet` renders `.stamp` ("Paused"), and controls remain operable without being visually disabled.
 4. **Non-web tab** - verified in `tests/e2e/extension.spec.ts` (test 5): active tab without a web domain disables site radios with note `Open a website to file a rule for it.`; global controls remain operable.
 5. **Global emoji rule** - verified in `tests/e2e/extension.spec.ts` (test 6): toggling `#emojiGlobalEnabled` hides `.comfort-emoji` while preserving contenteditable text.
 6. **Options filed rules** - verified in `tests/e2e/extension.spec.ts` (test 7): filed site rules table renders filed domains (`alpha.com`, `beta.com`) and persists setting changes.
 7. **Keyboard traversal** - verified in `tests/e2e/extension.spec.ts` (test 8): Tab focus lands on interactive controls; Space toggles buttons and radio choices persist natively.
 8. **Reduced motion** - verified in `tests/e2e/extension.spec.ts` (test 9): emulated `prefers-reduced-motion: reduce` renders and operates without error.
 
-Acceptance: `pnpm test:e2e` runs 17 automated tests (9 Chromium + 8 WebKit) with 100% pass rate.
+Acceptance: `pnpm test:e2e` runs 21 automated tests (10 Chromium + 11 WebKit).
 
 ## 2. Browser-action feedback (done 2026-08-19)
 
 Toolbar affordances reflect the effective state of the active tab (`src/entrypoints/background.ts`):
 
-- `action.setTitle`: dynamic title reflecting effective state (`Cognitive Comfort — Paused`, `Cognitive Comfort — Media shown on <domain>`, `Cognitive Comfort — Active on <domain>`).
+- `action.setTitle`: dynamic title reflecting effective state (`Cognitive Comfort — Paused`, `Cognitive Comfort — Media shown on <domain>`, `Cognitive Comfort — Media blurred on <domain>`).
 - `action.setBadgeText`: single-glyph badges (`'⏸'` for paused, `'○'` for media shown/disabled, `''` for active/blurred).
 - `action.setBadgeBackgroundColor`: colors drawn from palette constants (`--stamp` `#c4705a` for paused, `--brass-quiet` `#8d7240` for show/disabled).
-- Synchronized on tab activation (`tabs.onActivated`), navigation/updates (`tabs.onUpdated`), and storage changes (`onSettingsChange`).
+- Synchronized on tab activation (`tabs.onActivated`), navigation/updates (`tabs.onUpdated`), and storage changes (`onSettingsChange`); Chromium acceptance test 10 covers action API transitions, while `tests/browser-action.test.ts` covers per-domain presentation.
 
 ## 3. On-page reveal affordance (done 2026-08-19)
 

@@ -81,7 +81,7 @@ components:
 
 The system is a reading room's card catalog rather than a generated dark-app dashboard: an ink-umber ground, dim parchment sheets, hairline rules, one brass accent, Literata catalog lettering, system mono for measured information, and near-crisp paper forms. It refuses translucent gradient cards, radial glows, glass effects, and equal-weight pills.
 
-The popup leads with the effective state of the current page. Filing a rule settles its sheet with a brass filing mark; pausing stamps the record instead of washing live controls gray. The warm parchment world still does not match the product's lavender logo; do not smooth over that open identity mismatch.
+The popup leads with the effective state of the current page. Filing a rule settles its sheet with a brass filing mark; pausing stamps the record instead of washing live controls gray. The four-cell media mark carries the same ink-umber, parchment, and brass world.
 
 **Key Characteristics:**
 - Flat, layered paper surfaces on an ink-umber ground.
@@ -146,7 +146,7 @@ The bundled variable face declares weights 400–600. Body content uses optical 
 
 Spacing has five reusable steps: hair (4px), tight (8px), standard (12px), wide (18px), and section (24px). Sheets use wide horizontal/top padding with standard bottom padding. Shared sheet siblings use standard separation; options increases major sheet separation to section spacing.
 
-The popup shell is exactly `html { width: 372px }`. The browser owns popup height and scrolling; `body.popup-shell` only contains overscroll. Content sits within 16px side/top and 14px bottom padding. Do not add a fixed/max height or an internal overflow scroller.
+The popup shell is exactly `html { width: 372px }`. Chrome and Firefox own popup height and scrolling; `body.popup-shell` only contains overscroll. Safari is the measured exception: a WebKit-only rule pins `html` and `body.popup-shell` to the 600px popover viewport and scrolls the body to prevent native resize fights, lost momentum, and exposed grey backing. Content sits within 16px side/top and 14px bottom padding.
 
 The options surface is a centered full-width column capped at 720px, padded 40px 20px 56px. At 560px and below its padding becomes 28px 14px 40px. Filed-rule rows use a two-column grid: a flexible subject and a control column of at least 300px at a 1:1.5 ratio, separated by 18px; at 560px they collapse to one column with 12px separation.
 
@@ -222,4 +222,4 @@ A notice is an announced save/removal status using stamp border, wash, and expli
 - **Don't** use immutable keycap illustrations or assume physical key positions.
 - **Don't** introduce translucent cards, radial glows, glass effects, resting drop shadows, or equal-weight pills.
 - **Don't** add a suspended-sheet opacity state or `aria-pressed` to the pause command.
-- **Don't** constrain the popup's height or create an internal popup scroller; the browser owns both.
+- **Don't** constrain popup height or create an internal scroller outside the documented WebKit-only Safari popover fix.

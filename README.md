@@ -2,8 +2,6 @@
 
 Cognitive Comfort blurs images, videos, and other media on the pages you visit until you choose to see them. Built with WXT for Chrome, Edge, Firefox, and macOS Safari.
 
-**Pre-release:** This is an early version.
-
 [Install via Chrome Web Store](https://chromewebstore.google.com/detail/cognitive-comfort/fachhhdjmbceikclmlicjdaikhajdpbi)
 
 ## What it does
@@ -21,19 +19,20 @@ To apply those features, the content script locally inspects DOM elements, compu
 
 `config/profiles/*.toml` provide product identity and defaults:
 
-- `public` — release behavior: content scope, click reveal, 40px blur, emoji blocking disabled.
-- `local` — aggressive testing behavior: all-media scope, hover + click reveal, 50px blur, emoji blocking enabled.
+- `public` — release behavior: all-media scope, hover + click lock reveal, 50px blur, emoji blocking disabled.
+- `local` — the same media defaults with emoji blocking enabled and a local Safari bundle identity.
 
 Machine paths, deployment, Apple teams, signing, store credentials, and submission live outside this repository.
 
 ## Build from source
 
-Prerequisites: Node.js 20+, pnpm 11.13.1, and optionally `just`.
+Prerequisites: Node.js 20+, pnpm 11.13.1, and optionally `just`. The E2E suite also requires Playwright's Chromium and WebKit binaries.
 
 ```fish
 git clone https://github.com/olegpulatov/cognitive-comfort.git
 cd cognitive-comfort
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium webkit
 env BUILD_PROFILE=public just build-all
 ```
 
@@ -52,12 +51,12 @@ just validate-release edge
 just validate-release firefox
 ```
 
-Version 0.3.0 produces:
+Versioned packages follow these names:
 
-- `.output/cognitive-comfort-0.3.0-chrome.zip`
-- `.output/cognitive-comfort-0.3.0-edge.zip`
-- `.output/cognitive-comfort-0.3.0-firefox.zip`
-- `.output/cognitive-comfort-0.3.0-sources.zip`
+- `.output/cognitive-comfort-<version>-chrome.zip`
+- `.output/cognitive-comfort-<version>-edge.zip`
+- `.output/cognitive-comfort-<version>-firefox.zip`
+- `.output/cognitive-comfort-<version>-sources.zip`
 
 The Firefox sources ZIP is generated from an explicit source allowlist.
 
@@ -81,10 +80,10 @@ Tagging requires `main`, verifies first, stages only `package.json`, and does no
 
 - `just test` runs deterministic unit and DOM behavior tests.
 - `just test-coverage` enforces 75% statements, lines, and functions plus 65% branches over core utilities and content behavior.
-- `just test-e2e` builds the public Chrome artifact and exercises it in a real Playwright Chromium persistent context.
+- `just test-e2e` builds the public Chrome artifact, loads it in Playwright Chromium, and runs complementary WebKit engine regressions.
 - [`docs/browser-testing.md`](./docs/browser-testing.md) defines required stable Chrome, Edge, Firefox, and Safari checks.
 
-Playwright covers Chromium extension behavior. Real Edge, Firefox, and Safari smoke remains manual because Playwright cannot load the Firefox or Safari extensions.
+Playwright covers Chromium extension behavior plus WebKit rendering regressions. Real Edge, Firefox, and Safari extension smoke remains manual because Playwright does not load the Firefox or Safari extension artifacts.
 
 ## Persistence
 

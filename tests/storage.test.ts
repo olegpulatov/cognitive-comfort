@@ -231,6 +231,17 @@ describe('storage', () => {
       expect('example.com' in (await getSettings()).siteOverrides).toBe(false);
     });
 
+    it('preserves concurrent fixed overrides for different domains', async () => {
+      await Promise.all([
+        setSiteOverride('alpha.com', 'disabled'),
+        setSiteOverride('beta.com', 'enabled'),
+      ]);
+      expect((await getSettings()).siteOverrides).toEqual({
+        'alpha.com': 'disabled',
+        'beta.com': 'enabled',
+      });
+    });
+
     it("serializes concurrent toggleSiteOverride calls without losing toggles", async () => {
       const [res1, res2] = await Promise.all([
         toggleSiteOverride('concurrent.com'),
@@ -242,8 +253,8 @@ describe('storage', () => {
 
     it("routes toggleSiteOverride through the background and applies the returned next value", async () => {
       vi.stubGlobal('window', {});
-      const sendMessage = vi.fn().mockResolvedValue({ ok: true, next: 'disabled' });
-      (browser as unknown as { runtime: { sendMessage: unknown } }).runtime.sendMessage = sendMessage;
+      const sendMessage = vi.spyOn(browser.runtime, 'sendMessage')
+        .mockResolvedValue({ ok: true, next: 'disabled' } as never);
 
       const result = await toggleSiteOverride('route.com');
       expect(result).toBe('disabled');
@@ -255,6 +266,24 @@ describe('storage', () => {
       });
       // Background applies the toggle; the caller trusts the response, no local write.
       expect((await getSettings()).siteOverrides['route.com']).toBeUndefined();
+    });
+
+    it('surfaces an explicit background failure instead of claiming the toggle succeeded', async () => {
+      vi.stubGlobal('window', {});
+      vi.spyOn(browser.runtime, 'sendMessage').mockResolvedValue({ ok: false } as never);
+
+      await expect(toggleSiteOverride('failed.com')).rejects.toThrow(
+        'Cognitive Comfort failed to persist settings.'
+      );
+      expect((await getSettings()).siteOverrides['failed.com']).toBeUndefined();
+    });
+
+    it('falls back to the queued local toggle when the background response is malformed', async () => {
+      vi.stubGlobal('window', {});
+      vi.spyOn(browser.runtime, 'sendMessage').mockResolvedValue({ ok: true } as never);
+
+      await expect(toggleSiteOverride('fallback.com')).resolves.toBe('disabled');
+      expect((await getSettings()).siteOverrides['fallback.com']).toBe('disabled');
     });
   });
 

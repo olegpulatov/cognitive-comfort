@@ -28,8 +28,8 @@ Not, and never marketed as: ad blocker, parental control, content filter, produc
 
 ## Operating Context
 
-- Toolbar popup is the frequent-use surface (current shell min 360×520, 520px scroll area).
-- Options page is a second, wider surface (currently a duplicate of the popup; see Capabilities).
+- Toolbar popup is the frequent-use surface (372px wide; browser-owned height and scrolling, with a Safari popover-specific viewport fix).
+- Options is the wider advanced-settings surface for global policy, per-site rules, shortcuts, and diagnostics.
 - Effects run in the page content script; state lives in one browser-local key `comfortSettings`.
 - Keyboard shortcuts are browser-native assignments, editable only through browser UI (`chrome://extensions/shortcuts`, `about:addons`, Safari > Settings > Extensions). Assignments can be unset or user-changed.
 - Safari ships inside a containing app with its own status screen.
@@ -41,13 +41,13 @@ Reference package for current behavior, code pointers, and acceptance scenarios:
 
 Confirmed behavior that must be preserved unless the owner changes it:
 
-- Hiding = `filter: blur(1–100px) brightness(0.3)` with 0.2s transition; reveal = `blur(0) brightness(1)`; peek also restores saturation. No overlay, label, placeholder, or cursor hint today.
+- Hiding = `filter: blur(1–100px) brightness(0.3)` with 0.2s transition; reveal = `blur(0) brightness(1)`; peek also restores saturation. No overlay, label, or placeholder; a pointer cursor provides the reveal affordance.
 - Emoji hiding is a different mechanism: matched emoji text is wrapped in `.comfort-emoji` spans and `display: none`; original text is restored on disable.
 - Scope: "content media" (images except 1×1, `picture`/`video`/`canvas`, known video iframes, eligible CSS background images) vs "content + small UI media" (adds SVG and small media inside buttons/links/role-buttons/aria-labelled elements).
 - Reveal modes: Click Only (first activation reveals and swallows the click so linked images do not navigate; second passes through), Hover Only, Hover + Click Lock. Reveal applies to a geometric "cluster" of sibling/ancestor media.
 - Peek: held shortcut reveals supported media and emoji; command-API delivery gives a ~350ms pulse because key release is not exposed.
 - State precedence: pause > exact-domain override > base-domain override > global default. Emoji follows the same precedence but inherits its own Emoji Default, not global media.
-- Public first-install defaults: enabled, not paused, content scope, click reveal, 40px blur, emoji hiding off. Local dev profile differs, so dev screenshots misrepresent first run.
+- Public first-install defaults: enabled, not paused, content + small UI media scope, hover + click lock reveal, 50px blur, emoji hiding off. The local profile differs only by enabling emoji hiding and using a local Safari identity.
 - Fully local: no analytics, tracking SDK, account, server, or extension-originated network requests. Settings and domain overrides stay in browser-local storage.
 
 Technical constraints:
@@ -64,11 +64,11 @@ Decided in this session:
 
 Explicitly undecided product facts (do not invent):
 
-- Safari release readiness and any pricing/business model.
+- Any pricing/business model.
 - Availability on Firefox, Edge, and Apple stores; only the Chrome listing is verified live.
 - Terminology fix for "Hide" (blur/dim for media vs removal for emoji) and the double meaning of "Global" (global default vs inheritance label) — the problem is confirmed, the wording is not chosen.
 
-Known UX debt to fix, not to preserve: state conveyed only by `.active` styling (no `aria-pressed`), labels without `for`, generic spans instead of headings/fieldsets/lists, inheritance shown only via dashed border and hover `title`, no focus-visible design, hidden scrollbar, controls showing saved rather than effective state while paused, no browser-action feedback for pause/global-show/site override, unsurfaced save failures, one 520px scroll area mixing frequent actions, global policy, advanced tuning, shortcuts, and build metadata.
+Remaining UX debt: terminology still overloads “Hide” and “Global”; browser-owned shortcut reassignment varies by browser; and the popup still exposes some policy controls that also appear in the advanced options surface.
 
 ## Brand Commitments
 

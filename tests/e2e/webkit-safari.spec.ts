@@ -684,9 +684,12 @@ test.describe('WebKit / Safari Extension Behavior', () => {
             local: { get: async () => ({}), set: async () => {} },
             onChanged: { addListener() {} },
           },
-          commands: { getAll: async () => [] },
+          commands: {
+            getAll: async () => [{ name: 'toggle-pause', shortcut: '' }],
+          },
           tabs: { query: async () => [{ url: 'https://example.com/' }] },
           runtime: {
+            id: 'webkit-popup-test',
             openOptionsPage: async () => {},
             sendMessage: async () => undefined,
             getURL: (s: string) => s,
@@ -697,6 +700,7 @@ test.describe('WebKit / Safari Extension Behavior', () => {
 
       await page.goto('http://127.0.0.1:4177/popup.html');
       await page.waitForSelector('#buildInfo');
+      await expect(page.locator('.shortcut-key.not-set')).toHaveText('Not set');
 
       // Content must overflow the 600px popover cap, or there is nothing to pin.
       await expect.poll(() => page.evaluate(() => document.body.scrollHeight)).toBeGreaterThan(600);

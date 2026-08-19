@@ -125,9 +125,6 @@ function renderPause(settings: ComfortSettings): void {
   elements.pauseBtn.textContent = settings.paused ? 'Resume' : 'Pause';
   elements.pauseBtn.classList.toggle('is-engaged', settings.paused);
 
-  elements.globalSheet.classList.toggle('is-suspended', settings.paused);
-  elements.revealSheet.classList.toggle('is-suspended', settings.paused);
-
   const existingStamp = elements.siteSheet.querySelector('.stamp');
   if (settings.paused && !existingStamp) {
     const stamp = document.createElement('span');
@@ -274,7 +271,7 @@ async function loadShortcuts(): Promise<void> {
     name.textContent = shortcutLabels[command.name];
 
     const key = document.createElement('kbd');
-    key.className = 'shortcut-key';
+    key.className = `shortcut-key${command.shortcut ? '' : ' not-set'}`;
     key.textContent = command.shortcut || 'Not set';
 
     item.append(name, key);

@@ -1,9 +1,9 @@
+import { getBrowserActionPresentation } from '../utils/browser-action';
 import { getDomain } from '../utils/domain';
 import {
   applySettingsUpdate,
   applySiteOverrideUpdate,
   getSettings,
-  isActiveForSite,
   isSettingsUpdateMessage,
   isSiteOverrideUpdateMessage,
   onSettingsChange,
@@ -21,34 +21,11 @@ async function updateBrowserActionForTab(tab?: { id?: number; url?: string }): P
   const domain = url ? getDomain(url) : '';
   const tabId = tab?.id;
 
-  if (settings.paused) {
-    await actionApi.setTitle({ title: 'Cognitive Comfort — Paused', tabId }).catch(() => {});
-    await actionApi.setBadgeText({ text: '⏸', tabId }).catch(() => {});
-    await actionApi.setBadgeBackgroundColor({ color: '#c4705a', tabId }).catch(() => {});
-    return;
-  }
-
-  if (!domain) {
-    if (!settings.enabled) {
-      await actionApi.setTitle({ title: 'Cognitive Comfort — Media shown globally', tabId }).catch(() => {});
-      await actionApi.setBadgeText({ text: '○', tabId }).catch(() => {});
-      await actionApi.setBadgeBackgroundColor({ color: '#8d7240', tabId }).catch(() => {});
-    } else {
-      await actionApi.setTitle({ title: 'Cognitive Comfort — Active', tabId }).catch(() => {});
-      await actionApi.setBadgeText({ text: '', tabId }).catch(() => {});
-    }
-    return;
-  }
-
-  const active = isActiveForSite(settings, domain);
-  if (!active) {
-    const title = `Cognitive Comfort — Media shown on ${domain}`;
-    await actionApi.setTitle({ title, tabId }).catch(() => {});
-    await actionApi.setBadgeText({ text: '○', tabId }).catch(() => {});
-    await actionApi.setBadgeBackgroundColor({ color: '#8d7240', tabId }).catch(() => {});
-  } else {
-    await actionApi.setTitle({ title: `Cognitive Comfort — Media blurred on ${domain}`, tabId }).catch(() => {});
-    await actionApi.setBadgeText({ text: '', tabId }).catch(() => {});
+  const presentation = getBrowserActionPresentation(settings, domain);
+  await actionApi.setTitle({ title: presentation.title, tabId }).catch(() => {});
+  await actionApi.setBadgeText({ text: presentation.badgeText, tabId }).catch(() => {});
+  if (presentation.badgeColor) {
+    await actionApi.setBadgeBackgroundColor({ color: presentation.badgeColor, tabId }).catch(() => {});
   }
 }
 
