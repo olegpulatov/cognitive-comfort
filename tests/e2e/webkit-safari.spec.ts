@@ -355,6 +355,66 @@ test.describe('WebKit / Safari Extension Behavior', () => {
     }
   });
 
+  test('0x0 wrapper in hit chain: pointer over its text reveals nothing; hovered card reveals only itself', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { margin: 0; }
+            #zero { position: relative; width: 0; height: 0; overflow: visible; }
+            #label { position: absolute; top: 8px; left: 8px; width: 200px; height: 24px; }
+            .card { position: absolute; width: 240px; }
+            .card img { width: 240px; height: 135px; display: block; }
+            #card1 { top: 48px; left: 8px; }
+            #card2 { top: 48px; left: 264px; }
+            #card3 { top: 48px; left: 520px; }
+          </style>
+        </head>
+        <body>
+          <div id="zero">
+            <div id="label">Section</div>
+            <div class="card" id="card1"><img id="t1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='135'><rect width='100%' height='100%' fill='gold'/></svg>"></div>
+            <div class="card" id="card2"><img id="t2" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='135'><rect width='100%' height='100%' fill='slateblue'/></svg>"></div>
+            <div class="card" id="card3"><img id="t3" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='135'><rect width='100%' height='100%' fill='darkorange'/></svg>"></div>
+          </div>
+        </body>
+        </html>
+        `
+      );
+
+      const t1 = page.locator('#t1');
+      const t2 = page.locator('#t2');
+      const t3 = page.locator('#t3');
+
+      await expect.poll(() => t1.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => t2.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => t3.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+
+      // 1. Pointer over the 0x0 wrapper's own text: nothing reveals
+      await page.hover('#label');
+      await expect.poll(() => t1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t2.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t3.getAttribute('data-comfort-revealed')).toBeNull();
+
+      // 2. Hovering card 2 reveals only card 2, never the wrapper's first card
+      await page.hover('#t2');
+      await expect.poll(() => t2.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => t2.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+      await expect.poll(() => t1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t1.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => t3.getAttribute('data-comfort-revealed')).toBeNull();
+    } finally {
+      await browser.close();
+    }
+  });
+
   test('Multi-layer scrim coordinate penetration: resolves media under overlay buttons/scrims', async () => {
     const browser = await webkit.launch({ headless: true });
     const page = await browser.newPage();
