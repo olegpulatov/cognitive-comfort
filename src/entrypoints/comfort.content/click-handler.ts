@@ -1,7 +1,7 @@
 import type { RevealMode } from '../../utils/types';
 import { REVEALED_ATTR } from './styles';
 
-const MEDIA_SELECTORS = 'img, video, picture, canvas, iframe, svg, [data-comfort-bg-image], [style*="background-image"], [style*="background:"]';
+const MEDIA_SELECTORS = 'img, video, picture, canvas, iframe, svg, [data-comfort-bg-image], [style*="url("]';
 const MAX_CONTAINER_DEPTH = 6;
 const MAX_CONTAINER_DELTA = 72;
 const MIN_MEDIA_SIZE = 16;
@@ -63,6 +63,9 @@ let observer: MutationObserver | null = null;
 function isElementNode(value: unknown): value is Element {
   return typeof value === 'object' && value !== null && 'nodeType' in value && (value as Node).nodeType === 1;
 }
+function isPrimaryPlainClick(event: MouseEvent | PointerEvent): boolean {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+}
 
 export function setupRevealHandlers(revealMode: RevealMode): void {
   currentMode = revealMode;
@@ -105,7 +108,7 @@ export function teardownRevealHandlers(): void {
 
 function handleClick(event: MouseEvent): void {
   if (currentMode === 'hover') return;
-
+  if (!isPrimaryPlainClick(event)) return;
   const target = isElementNode(event.target) ? event.target : null;
   const point = { x: event.clientX, y: event.clientY };
   const cluster = findRevealCluster(target, point);
@@ -129,7 +132,7 @@ function handleClick(event: MouseEvent): void {
 
 function handlePointerDown(event: PointerEvent): void {
   if (currentMode === 'hover') return;
-
+  if (!isPrimaryPlainClick(event)) return;
   const target = isElementNode(event.target) ? event.target : null;
   const point = { x: event.clientX, y: event.clientY };
   const cluster = findRevealCluster(target, point);

@@ -175,14 +175,21 @@ export async function applySiteOverrideUpdate(
   await run;
 }
 
-export function isSiteOverrideUpdateMessage(
-  msg: unknown
-): msg is {
-  type: typeof COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE;
-  key: SiteOverrideKey;
-  domain: string;
-  override: SiteOverride;
-} {
+type SiteOverrideUpdateMessage =
+  | {
+      type: typeof COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE;
+      key: SiteOverrideKey;
+      domain: string;
+      override: SiteOverride;
+    }
+  | {
+      type: typeof COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE;
+      key: 'siteOverrides';
+      domain: string;
+      override: 'toggle';
+    };
+
+export function isSiteOverrideUpdateMessage(msg: unknown): msg is SiteOverrideUpdateMessage {
   if (typeof msg !== 'object' || msg === null) return false;
   const keys = Object.keys(msg);
   if (
@@ -194,7 +201,9 @@ export function isSiteOverrideUpdateMessage(
   if (!('type' in msg) || msg.type !== COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE) return false;
   if (!('key' in msg) || (msg.key !== 'siteOverrides' && msg.key !== 'emojiSiteOverrides')) return false;
   if (!('domain' in msg) || typeof msg.domain !== 'string' || msg.domain.length === 0) return false;
-  return 'override' in msg && isOverride(msg.override);
+  if (!('override' in msg)) return false;
+  if (isOverride(msg.override)) return true;
+  return msg.override === 'toggle' && msg.key === 'siteOverrides';
 }
 export function isSettingsUpdateMessage(
   msg: unknown
@@ -261,13 +270,58 @@ export async function toggleGlobalMedia(): Promise<boolean> {
 }
 
 export async function toggleSiteOverride(domain: string): Promise<SiteOverride> {
-  const settings = await getSettings();
-  const globalEquivalent = getGlobalMediaDefault(settings);
-  const reverseOfGlobal = globalEquivalent === 'enabled' ? 'disabled' : 'enabled';
-  const currentOverride = settings.siteOverrides[domain] ?? 'default';
-  const next = currentOverride === reverseOfGlobal ? 'default' : reverseOfGlobal;
+  if (!isBackgroundContext() && typeof browser?.runtime?.sendMessage === 'function') {
+    let response: unknown;
+    try {
+      response = await browser.runtime.sendMessage({
+        type: COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE,
+        key: 'siteOverrides',
+        domain,
+        override: 'toggle',
+      });
+    } catch {
+      return await toggleSiteOverrideQueued(domain);
+    }
+    if (
+      typeof response === 'object'
+      && response !== null
+      && 'ok' in response
+      && response.ok === true
+      && 'next' in response
+      && isOverride(response.next)
+    ) {
+      return response.next;
+    }
+    if (typeof response === 'object' && response !== null && 'ok' in response && response.ok === false) {
+      throw new Error(PERSISTENCE_ERROR_MESSAGE);
+    }
+    return await toggleSiteOverrideQueued(domain);
+  }
+  return toggleSiteOverrideQueued(domain);
+}
 
-  await setSiteOverride(domain, next);
+async function toggleSiteOverrideQueued(domain: string): Promise<SiteOverride> {
+  let next: SiteOverride = 'default';
+  const run = writeQueue.then(async () => {
+    const settings = await getSettings();
+    const globalEquivalent = getGlobalMediaDefault(settings);
+    const reverseOfGlobal = globalEquivalent === 'enabled' ? 'disabled' : 'enabled';
+    const currentOverride = settings.siteOverrides[domain] ?? 'default';
+    next = currentOverride === reverseOfGlobal ? 'default' : reverseOfGlobal;
+
+    const nextOverrides = { ...settings.siteOverrides };
+    if (next === 'default') {
+      delete nextOverrides[domain];
+    } else {
+      nextOverrides[domain] = next;
+    }
+
+    await browser.storage.local.set({
+      [COMFORT_SETTINGS_KEY]: normalizeSettings({ ...settings, siteOverrides: nextOverrides }),
+    });
+  });
+  writeQueue = run.catch(() => {});
+  await run;
   return next;
 }
 

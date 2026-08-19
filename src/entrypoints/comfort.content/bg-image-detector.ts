@@ -111,14 +111,20 @@ function shouldIgnoreBackgroundElement(element: Element): boolean {
 function observeChanges(): void {
   observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      if (mutation.type === 'attributes' && mutation.target instanceof Element) {
+      if (mutation.target instanceof Element) {
         pendingElements.add(mutation.target);
+      }
+      if (mutation.type === 'attributes') {
         continue;
       }
 
       for (const node of mutation.addedNodes) {
         if (!(node instanceof Element)) continue;
         enqueueElementTree(node);
+      }
+      for (const node of mutation.removedNodes) {
+        if (!(node instanceof Element)) continue;
+        enqueueElementTree(node, true);
       }
     }
 
@@ -138,11 +144,13 @@ function observeChanges(): void {
   });
 }
 
-function enqueueElementTree(root: Element): void {
+function enqueueElementTree(root: Element, removed = false): void {
   if (EXCLUDED_TAGS.has(root.tagName)) return;
   if (isEditableElement(root)) return;
 
   pendingElements.add(root);
+  if (removed) return;
+
   root.querySelectorAll('*').forEach((child) => {
     if (!EXCLUDED_TAGS.has(child.tagName) && !isEditableElement(child)) {
       pendingElements.add(child);

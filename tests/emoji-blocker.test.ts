@@ -56,4 +56,19 @@ describe('emoji blocker', () => {
     document.body.append(' Later 🧩');
     expect(document.querySelectorAll('.comfort-emoji')).toHaveLength(0);
   });
+
+  it('processes in-place textContent changes (characterData mutations)', async () => {
+    document.body.innerHTML = '<p id="ticker">Price: $100</p>';
+    setupEmojiBlocker();
+
+    expect(document.querySelectorAll('.comfort-emoji')).toHaveLength(0);
+
+    const ticker = document.querySelector('#ticker') as HTMLParagraphElement;
+    const textNode = ticker.firstChild as Text;
+    textNode.textContent = 'Price: $105 🚀';
+
+    await vi.waitFor(() => {
+      expect(ticker.querySelector('.comfort-emoji')?.textContent).toBe('🚀');
+    });
+  });
 });

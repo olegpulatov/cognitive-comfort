@@ -78,6 +78,11 @@ function processElement(root: Node): void {
 
 function handleMutations(mutations: MutationRecord[]): void {
   for (const mutation of mutations) {
+    if (mutation.type === 'characterData' && mutation.target.nodeType === Node.TEXT_NODE) {
+      processTextNode(mutation.target as Text);
+      continue;
+    }
+
     for (const node of mutation.addedNodes) {
       if (node.nodeType === Node.TEXT_NODE) {
         processTextNode(node as Text);
@@ -110,6 +115,7 @@ export function setupEmojiBlocker(): void {
   observer.observe(document.body || document.documentElement, {
     childList: true,
     subtree: true,
+    characterData: true,
   });
 }
 

@@ -84,13 +84,15 @@ export default defineBackground(() => {
     const operation = isSettingsUpdateMessage(msg)
       ? applySettingsUpdate(msg.settings)
       : isSiteOverrideUpdateMessage(msg)
-        ? applySiteOverrideUpdate(msg.key, msg.domain, msg.override)
+        ? msg.override === 'toggle'
+          ? toggleSiteOverride(msg.domain)
+          : applySiteOverrideUpdate(msg.key, msg.domain, msg.override)
         : null;
 
     if (!operation) return;
 
     operation
-      .then(() => sendResponse({ ok: true }))
+      .then((result) => sendResponse({ ok: true, next: result }))
       .catch(() => sendResponse({ ok: false }));
 
     return true;

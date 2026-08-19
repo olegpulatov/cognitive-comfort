@@ -472,4 +472,76 @@ describe('reveal handlers', () => {
     expect(defaultPrevented).toBe(false);
     expect(thumb1.hasAttribute(REVEALED_ATTR)).toBe(true);
   });
+
+  it('does not treat plain colored divs without url() as media or swallow clicks on them', () => {
+    document.body.innerHTML = `
+      <div id="card" style="background: #ffffff; background-color: rgb(255, 255, 255);">
+        <button id="action-btn">Click me</button>
+      </div>
+    `;
+
+    const btn = document.querySelector('#action-btn') as HTMLButtonElement;
+    setupRevealHandlers('click');
+
+    const pointerDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    const pointerDownSwallowed = !btn.dispatchEvent(pointerDown);
+    expect(pointerDownSwallowed).toBe(false);
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    const clickSwallowed = !btn.dispatchEvent(clickEvent);
+    expect(clickSwallowed).toBe(false);
+  });
+
+  it('does not swallow non-primary clicks (middle click) or modified clicks', () => {
+    document.body.innerHTML = `
+      <a id="link" href="https://example.com">
+        <img id="media" src="test.jpg">
+      </a>
+    `;
+
+    const media = document.querySelector('#media') as HTMLImageElement;
+    setupRevealHandlers('click');
+
+    // Middle click (button 1)
+    const middlePointerDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 1 });
+    expect(!media.dispatchEvent(middlePointerDown)).toBe(false);
+
+    const middleClick = new MouseEvent('click', { bubbles: true, cancelable: true, button: 1 });
+    expect(!media.dispatchEvent(middleClick)).toBe(false);
+
+    // Meta+click (Cmd/Ctrl click)
+    const metaPointerDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, metaKey: true });
+    expect(!media.dispatchEvent(metaPointerDown)).toBe(false);
+
+    const metaClick = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, metaKey: true });
+    expect(!media.dispatchEvent(metaClick)).toBe(false);
+  });
+
+  it('click mode: swallows first click event and allows second click event to pass through', () => {
+    document.body.innerHTML = `
+      <a id="link" href="#destination">
+        <img id="thumb" src="thumb.jpg">
+      </a>
+    `;
+
+    const thumb = document.querySelector('#thumb') as HTMLImageElement;
+    setupRevealHandlers('click');
+
+    // 1st activation: pointerdown swallowed
+    const pd1 = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    expect(!thumb.dispatchEvent(pd1)).toBe(true);
+    expect(thumb.hasAttribute(REVEALED_ATTR)).toBe(true);
+
+    // 1st click: swallowed
+    const clk1 = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    expect(!thumb.dispatchEvent(clk1)).toBe(true);
+
+    // 2nd activation: pointerdown passes through
+    const pd2 = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+    expect(!thumb.dispatchEvent(pd2)).toBe(false);
+
+    // 2nd click: passes through
+    const clk2 = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    expect(!thumb.dispatchEvent(clk2)).toBe(false);
+  });
 });

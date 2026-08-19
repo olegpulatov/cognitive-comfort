@@ -230,6 +230,32 @@ describe('storage', () => {
       expect(next).toBe('default');
       expect('example.com' in (await getSettings()).siteOverrides).toBe(false);
     });
+
+    it("serializes concurrent toggleSiteOverride calls without losing toggles", async () => {
+      const [res1, res2] = await Promise.all([
+        toggleSiteOverride('concurrent.com'),
+        toggleSiteOverride('concurrent.com'),
+      ]);
+      expect([res1, res2]).toEqual(['disabled', 'default']);
+      expect('concurrent.com' in (await getSettings()).siteOverrides).toBe(false);
+    });
+
+    it("routes toggleSiteOverride through the background and applies the returned next value", async () => {
+      vi.stubGlobal('window', {});
+      const sendMessage = vi.fn().mockResolvedValue({ ok: true, next: 'disabled' });
+      (browser as unknown as { runtime: { sendMessage: unknown } }).runtime.sendMessage = sendMessage;
+
+      const result = await toggleSiteOverride('route.com');
+      expect(result).toBe('disabled');
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE,
+        key: 'siteOverrides',
+        domain: 'route.com',
+        override: 'toggle',
+      });
+      // Background applies the toggle; the caller trusts the response, no local write.
+      expect((await getSettings()).siteOverrides['route.com']).toBeUndefined();
+    });
   });
 
   describe('site override messages', () => {
@@ -280,6 +306,25 @@ describe('storage', () => {
           override: 'enabled',
         })
       ).toBe(true);
+    });
+
+    it('accepts a media toggle message but rejects an emoji-scoped toggle (regression)', () => {
+      expect(
+        isSiteOverrideUpdateMessage({
+          type: COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE,
+          key: 'siteOverrides',
+          domain: 'example.com',
+          override: 'toggle',
+        })
+      ).toBe(true);
+      expect(
+        isSiteOverrideUpdateMessage({
+          type: COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE,
+          key: 'emojiSiteOverrides',
+          domain: 'example.com',
+          override: 'toggle',
+        })
+      ).toBe(false);
     });
   });
 

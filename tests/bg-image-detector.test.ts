@@ -91,14 +91,14 @@ describe('background image detector', () => {
     media.setAttribute('data-test-background', '');
     document.body.append(media);
     observerCallback?.([
-      { type: 'childList', addedNodes: [media] } as unknown as MutationRecord,
+      { type: 'childList', target: media, addedNodes: [media], removedNodes: [] } as unknown as MutationRecord,
     ], {} as MutationObserver);
     expect(media.getAttribute(BG_IMAGE_ATTR)).toBe('true');
 
     media.removeAttribute('data-test-background');
     media.classList.add('changed');
     observerCallback?.([
-      { type: 'attributes', target: media, addedNodes: [] } as unknown as MutationRecord,
+      { type: 'attributes', target: media, addedNodes: [], removedNodes: [] } as unknown as MutationRecord,
     ], {} as MutationObserver);
     expect(media.hasAttribute(BG_IMAGE_ATTR)).toBe(false);
   });
@@ -137,5 +137,42 @@ describe('background image detector', () => {
     later.setAttribute('data-test-background', '');
     document.body.append(later);
     expect(later.hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+  });
+
+  it('re-evaluates container when childList mutations occur (children added or removed)', () => {
+    let observerCallback: MutationCallback | undefined;
+    class TestMutationObserver {
+      constructor(callback: MutationCallback) {
+        observerCallback = callback;
+      }
+      observe(): void {}
+      disconnect(): void {}
+      takeRecords(): MutationRecord[] {
+        return [];
+      }
+    }
+    vi.stubGlobal('MutationObserver', TestMutationObserver);
+
+    const container = document.createElement('div');
+    container.setAttribute('data-test-background', '');
+    document.body.append(container);
+
+    setupBgImageDetector();
+    expect(container.getAttribute(BG_IMAGE_ATTR)).toBe('true');
+
+    // Add a button inside container -> becomes interactive -> mark should be removed
+    const btn = document.createElement('button');
+    container.append(btn);
+    observerCallback?.([
+      { type: 'childList', target: container, addedNodes: [btn], removedNodes: [] } as unknown as MutationRecord,
+    ], {} as MutationObserver);
+    expect(container.hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+
+    // Remove button -> becomes eligible again -> mark should be restored
+    container.removeChild(btn);
+    observerCallback?.([
+      { type: 'childList', target: container, addedNodes: [], removedNodes: [btn] } as unknown as MutationRecord,
+    ], {} as MutationObserver);
+    expect(container.getAttribute(BG_IMAGE_ATTR)).toBe('true');
   });
 });
