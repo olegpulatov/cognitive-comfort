@@ -22,9 +22,9 @@ Repeat every row in Chrome, Edge, Firefox, and Safari.
 
 | Behavior | Expected result |
 | --- | --- |
-| Normal image | Computed filter contains `blur(40px)` under the public profile. |
+| Normal image | Computed filter contains `blur(50px)` under the public profile. |
 | CSS backgrounds | Initial and dynamically inserted background fixtures receive `data-comfort-bg-image` and blur. |
-| Small bare SVG | Remains visible in content scope. |
+| Small bare SVG | Remains visible in content scope; blurs in 'all' scope. |
 | Linked media | First activation reveals the linked cluster without navigation; second activation navigates to `#linked-destination`. |
 | Pause / Resume | Pause removes media blur; Resume restores it. |
 | Per-site media override | Show disables blur for `127.0.0.1`; Global restores inherited behavior. |

@@ -3,10 +3,14 @@
 /* The browser sizes and scrolls the popup itself; html owns the width only. */
 html {
   width: 372px;
+  background-color: var(--ground);
 }
 
 body.popup-shell {
+  background-color: var(--ground);
+  min-height: 100%;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .popup-container {

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const fixtureDir = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.E2E_PORT || 4177);
-const host = '127.0.0.1';
+const host = process.env.HOST || '0.0.0.0';
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url || '/', `http://${host}:${port}`);
@@ -36,7 +36,7 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`Fixture server listening at http://${host}:${port}/fixture.html`);
+  console.log(`Fixture server listening at http://127.0.0.1:${port}/fixture.html`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

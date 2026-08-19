@@ -82,7 +82,9 @@ async function capture(page, name, description, files, options = {}) {
 
 async function setSettings(extensionPage, settings) {
   await extensionPage.evaluate(async (value) => {
-    await globalThis.browser.storage.local.set({ comfortSettings: value });
+    const api = globalThis.chrome?.storage?.local ?? globalThis.browser?.storage?.local;
+    if (!api) throw new Error('No storage API found on extension page');
+    await api.set({ comfortSettings: value });
   }, settings);
 }
 
@@ -116,7 +118,10 @@ try {
   await page.goto(demoUrl);
   const hero = page.locator('.lede figure img');
   await hero.waitFor();
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('.lede figure img')).filter.includes('blur'));
+  await page.waitForFunction(() => {
+    const el = document.querySelector('.lede figure img');
+    return el && getComputedStyle(el).filter.includes('blur');
+  });
   const cards = page.locator('.cards img');
   await cards.first().waitFor();
   await page.waitForFunction(() =>
@@ -126,8 +131,11 @@ try {
   );
   await capture(page, 'page-hidden.png', 'Media-dense demonstration page with all media blurred by Cognitive Comfort.', files);
 
-  await hero.click();
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('.lede figure img')).filter.includes('blur(0px)'));
+  await hero.hover();
+  await page.waitForFunction(() => {
+    const el = document.querySelector('.lede figure img');
+    return el && getComputedStyle(el).filter.includes('blur(0px)');
+  });
   await page.waitForFunction(() =>
     [...document.querySelectorAll('.cards img')].every((image) =>
       getComputedStyle(image).filter.includes('blur')
@@ -141,14 +149,27 @@ try {
   // active-tab lookup to our local example.com demo; settings, rules, and ledger
   // rendering continue to come from real storage and the real popup code.
   await popup.addInitScript((url) => {
-    const query = globalThis.browser.tabs.query.bind(globalThis.browser.tabs);
-    globalThis.browser.tabs.query = async (queryInfo) => {
-      if (queryInfo?.active === true && queryInfo?.currentWindow === true) {
-        const tabs = await query(queryInfo);
-        return [{ ...(tabs[0] ?? {}), url }];
-      }
-      return query(queryInfo);
-    };
+    const g = globalThis;
+    const stubTabs = [{ id: 1, url, active: true }];
+    if (g.chrome?.tabs) {
+      const origChromeQuery = g.chrome.tabs.query;
+      g.chrome.tabs.query = (info, cb) => {
+        if (info?.active === true && info?.currentWindow === true) {
+          if (typeof cb === 'function') cb(stubTabs);
+          return Promise.resolve(stubTabs);
+        }
+        return origChromeQuery(info, cb);
+      };
+    }
+    if (g.browser?.tabs) {
+      const origBrowserQuery = g.browser.tabs.query;
+      g.browser.tabs.query = async (info) => {
+        if (info?.active === true && info?.currentWindow === true) {
+          return stubTabs;
+        }
+        return origBrowserQuery(info);
+      };
+    }
   }, demoUrl);
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
   await popup.locator('#currentDomain').filter({ hasText: 'example.com' }).waitFor();
@@ -160,8 +181,8 @@ try {
     paused: false,
     blockEmojis: false,
     blurScope: 'all',
-    revealMode: 'click',
-    blurAmount: 40,
+    revealMode: 'both',
+    blurAmount: 50,
     siteOverrides: {},
     emojiSiteOverrides: {},
   };
@@ -201,17 +222,13 @@ try {
   const metadata = {
     generatedAt: new Date().toISOString(),
     extensionVersion: extensionManifest.version,
-    chromiumVersion: context.browser().version(),
-    activeTabPinned: demoUrl,
     files,
   };
-  const manifestPath = path.join(outputDir, 'manifest.json');
-  await writeFile(manifestPath, `${JSON.stringify(metadata, null, 2)}\n`);
-  console.log(manifestPath);
+  await writeFile(path.join(outputDir, 'manifest.json'), JSON.stringify(metadata, null, 2));
 } catch (error) {
-  console.error(`Capture failed: ${error instanceof Error ? error.message : String(error)}`);
+  console.error(error);
   process.exitCode = 1;
 } finally {
-  if (context) await context.close();
+  await context?.close();
   if (userDataDir) await rm(userDataDir, { recursive: true, force: true });
 }

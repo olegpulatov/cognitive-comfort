@@ -8,9 +8,9 @@ firefoxExtensionId = "cognitive-comfort@olegpulatov.github.io"
 
 [defaults]
 enabled = true
-blurScope = "content"
-revealMode = "click"
-blurAmount = 40
+blurScope = "all"
+revealMode = "both"
+blurAmount = 50
 paused = false
 blockEmojis = false
 

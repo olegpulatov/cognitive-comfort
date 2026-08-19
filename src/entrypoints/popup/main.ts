@@ -1,5 +1,5 @@
 import type { ComfortSettings, SiteOverride } from '../../utils/types';
-import { getBaseDomain, getDomain, getSiteOverride } from '../../utils/domain';
+import { getBaseDomain, getDomain } from '../../utils/domain';
 import {
   getGlobalMediaDefault,
   getSettings,
@@ -39,8 +39,8 @@ const elements = {
 const shortcutLabels: Record<string, string> = {
   'toggle-pause': 'Pause extension',
   'toggle-site': 'Toggle this site',
-  'peek-show': 'Peek',
   'toggle-global': 'Toggle global media',
+  'peek-show': 'Peek at all media',
 };
 
 const SITE_CONTROL_IDS = [
@@ -74,8 +74,8 @@ function onRadioChange(name: string, handler: (value: string) => void): void {
 
 function setSiteControlsEnabled(enabled: boolean): void {
   for (const id of SITE_CONTROL_IDS) {
-    const control = document.getElementById(id) as HTMLInputElement | null;
-    if (control) control.disabled = !enabled;
+    const input = document.getElementById(id) as HTMLInputElement | null;
+    if (input) input.disabled = !enabled;
   }
 }
 
@@ -103,8 +103,8 @@ function inheritanceSource(
   domain: string
 ): 'own' | 'base' | 'global' {
   if (overrides[domain]) return 'own';
-  const baseDomain = getBaseDomain(domain);
-  if (baseDomain && overrides[baseDomain]) return 'base';
+  const base = getBaseDomain(domain);
+  if (base && overrides[base]) return 'base';
   return 'global';
 }
 
@@ -124,6 +124,9 @@ function render(settings: ComfortSettings): void {
 function renderPause(settings: ComfortSettings): void {
   elements.pauseBtn.textContent = settings.paused ? 'Resume' : 'Pause';
   elements.pauseBtn.classList.toggle('is-engaged', settings.paused);
+
+  elements.globalSheet.classList.toggle('is-suspended', settings.paused);
+  elements.revealSheet.classList.toggle('is-suspended', settings.paused);
 
   const existingStamp = elements.siteSheet.querySelector('.stamp');
   if (settings.paused && !existingStamp) {
@@ -186,21 +189,23 @@ function renderSiteField(
   overrides: Record<string, SiteOverride>,
   globalWord: string
 ): void {
-  const source = inheritanceSource(overrides, currentDomain);
-  const effective = getSiteOverride(overrides, currentDomain);
+  const override = overrides[currentDomain];
+  const base = getBaseDomain(currentDomain);
+  const baseOverride = base ? overrides[base] : undefined;
+  const effective = override ?? baseOverride ?? 'default';
 
-  selectRadio(name, source === 'base' ? effective : (overrides[currentDomain] ?? 'default'));
-  segments.classList.toggle('is-inherited', source === 'base');
+  selectRadio(name, effective);
 
-  if (source === 'base') {
-    const baseDomain = getBaseDomain(currentDomain);
-    note.textContent = `Following the rule filed for ${baseDomain}.`;
-    note.classList.add('field-note-inherited');
-    return;
+  if (override) {
+    segments.classList.remove('is-inherited');
+    note.textContent = '';
+  } else if (baseOverride) {
+    segments.classList.add('is-inherited');
+    note.textContent = `Following the rule filed for ${base}.`;
+  } else {
+    segments.classList.remove('is-inherited');
+    note.textContent = `Inherits the global rule (${globalWord}).`;
   }
-
-  note.classList.remove('field-note-inherited');
-  note.textContent = source === 'own' ? '' : `Global default: ${globalWord}.`;
 }
 
 function renderLedger(settings: ComfortSettings): void {
@@ -249,22 +254,27 @@ async function loadShortcuts(): Promise<void> {
   try {
     commands = await browser.commands.getAll();
   } catch {
-    return;
+    // Commands API optional
   }
 
-  for (const command of commands) {
-    if (!command.name || !(command.name in shortcutLabels)) continue;
-    if (command.name === 'toggle-pause') pauseShortcut = command.shortcut ?? '';
+  pauseShortcut =
+    commands.find((command) => command.name === 'toggle-pause')?.shortcut || '';
 
+  const knownCommands = commands.filter(
+    (command): command is typeof command & { name: string } =>
+      Boolean(command.name && shortcutLabels[command.name])
+  );
+
+  for (const command of knownCommands) {
     const item = document.createElement('div');
     item.className = 'shortcut-item';
 
     const name = document.createElement('span');
     name.className = 'shortcut-name';
-    name.textContent = shortcutLabels[command.name] ?? command.description ?? command.name;
+    name.textContent = shortcutLabels[command.name];
 
-    const key = document.createElement('span');
-    key.className = `shortcut-key${command.shortcut ? '' : ' not-set'}`;
+    const key = document.createElement('kbd');
+    key.className = 'shortcut-key';
     key.textContent = command.shortcut || 'Not set';
 
     item.append(name, key);
@@ -284,8 +294,10 @@ function showBuildInfo(): void {
 
   const release = document.createElement('span');
   release.textContent = `v${__BUILD_VERSION__} (${__BUILD_HASH__})`;
+
   const stamp = document.createElement('span');
   stamp.textContent = `${__BUILD_TIME__} · ${__BUILD_PROFILE__}`;
+
   element.append(release, stamp);
 }
 

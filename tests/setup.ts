@@ -55,9 +55,9 @@ const defaults = {
   enabled: true,
   paused: false,
   blockEmojis: false,
-  blurScope: 'content' as const,
-  revealMode: 'click' as const,
-  blurAmount: 40,
+  blurScope: 'all' as const,
+  revealMode: 'both' as const,
+  blurAmount: 50,
   siteOverrides: {},
   emojiSiteOverrides: {},
 };

@@ -33,10 +33,12 @@ export const SMALL_UI_MEDIA_SELECTOR_LIST = [
 
 export function generateStyles(settings: ComfortSettings): string {
   const selectors = getBlurSelectors(settings);
-  const base = selectors.join(', ');
-  const revealedSelectors = selectors.map(
-    (selector) => `${selector}[${REVEALED_ATTR}="true"]`
-  ).join(', ');
+  const base = selectors
+    .map((selector) => `${selector}:not([${REVEALED_ATTR}="true"])`)
+    .join(', ');
+  const revealedSelectors = selectors
+    .map((selector) => `${selector}[${REVEALED_ATTR}="true"]`)
+    .join(', ');
 
   const peekSelectors = CONTENT_MEDIA_SELECTOR_LIST.map(
     (selector) => `[data-comfort-peek] ${selector}`
@@ -45,6 +47,7 @@ export function generateStyles(settings: ComfortSettings): string {
   return `${base} {
   filter: blur(${settings.blurAmount}px) brightness(0.3) !important;
   transition: filter 0.2s ease !important;
+  cursor: pointer !important;
 }
 ${revealedSelectors},
 :root [${REVEALED_ATTR}="true"] {
@@ -58,7 +61,8 @@ ${peekSelectors},
 :root [${PEEK_CONTAINER_ATTR}]::before {
   opacity: 0 !important;
   background: transparent !important;
-}`;
+}
+`;
 }
 
 export function generateEmojiStyles(): string {

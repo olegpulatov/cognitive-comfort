@@ -1,0 +1,532 @@
+import { expect, test, webkit, type Page } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const rootDir = fileURLToPath(new URL('../../', import.meta.url));
+const bundlePath = path.join(rootDir, '.output', 'chrome-mv3', 'content-scripts', 'comfort.js');
+
+function loadComfortScript(): string {
+  return fs.readFileSync(bundlePath, 'utf8');
+}
+
+interface InitSettingsOptions {
+  revealMode?: 'both' | 'hover' | 'click';
+  blurScope?: 'all' | 'content';
+  blurAmount?: number;
+  enabled?: boolean;
+}
+
+async function setupWebKitPage(
+  page: Page,
+  htmlContent: string,
+  options: InitSettingsOptions = {}
+): Promise<void> {
+  const settings = {
+    schemaVersion: 1,
+    enabled: options.enabled ?? true,
+    paused: false,
+    blockEmojis: false,
+    blurScope: options.blurScope ?? 'all',
+    revealMode: options.revealMode ?? 'both',
+    blurAmount: options.blurAmount ?? 50,
+    siteOverrides: {},
+    emojiSiteOverrides: {},
+  };
+
+  await page.addInitScript((injectedSettings) => {
+    (window as unknown as { browser: unknown }).browser = {
+      storage: {
+        local: {
+          get: async () => ({ comfortSettings: injectedSettings }),
+          set: async () => {},
+        },
+        onChanged: {
+          addListener: () => {},
+          removeListener: () => {},
+          hasListener: () => false,
+        },
+      },
+      runtime: {
+        id: 'cognitive-comfort-webkit-test',
+        sendMessage: async () => {},
+        onMessage: {
+          addListener: () => {},
+          removeListener: () => {},
+        },
+      },
+    };
+  }, settings);
+
+  await page.goto('http://127.0.0.1:4177/fixture.html');
+  await page.setContent(htmlContent);
+
+  const scriptContent = loadComfortScript();
+  await page.addScriptTag({ content: scriptContent });
+  await page.waitForTimeout(100);
+}
+
+test.describe('WebKit / Safari Extension Behavior', () => {
+  test('WebKit CSS filter cascade override with !important and :not([data-comfort-revealed="true"])', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            .container { padding: 40px; }
+            img { width: 300px; height: 200px; display: block; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <img id="test-img" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='blue'/></svg>">
+          </div>
+        </body>
+        </html>
+        `
+      );
+
+      const img = page.locator('#test-img');
+
+      // Base state: blurred with 50px
+      await expect.poll(() => img.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(50px)');
+
+      // When data-comfort-revealed is set, WebKit immediately evaluates to blur(0px) brightness(1)
+      await img.evaluate((el) => el.setAttribute('data-comfort-revealed', 'true'));
+      await expect.poll(() => img.evaluate((el) => getComputedStyle(el).filter))
+        .toBe('blur(0px) brightness(1)');
+
+      // When attribute is removed, returns to blur(50px)
+      await img.evaluate((el) => el.removeAttribute('data-comfort-revealed'));
+      await expect.poll(() => img.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(50px)');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test('YouTube video card hover unblur and dynamic inline preview player <video> mounting reconciliation', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            ytd-rich-item-renderer { display: block; width: 360px; height: 280px; position: relative; margin: 40px; }
+            ytd-thumbnail { display: block; width: 360px; height: 202px; position: relative; overflow: hidden; }
+            ytd-thumbnail img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            #inline-preview-player { position: absolute; top: 0; left: 0; width: 360px; height: 202px; }
+            #inline-preview-player video { width: 100%; height: 100%; object-fit: cover; display: block; }
+          </style>
+        </head>
+        <body>
+          <ytd-rich-item-renderer id="card-1">
+            <ytd-thumbnail id="thumb-container">
+              <img id="thumb-img" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='202'><rect width='100%' height='100%' fill='crimson'/></svg>">
+            </ytd-thumbnail>
+            <div id="details"><h3>Nature Documentary</h3></div>
+          </ytd-rich-item-renderer>
+        </body>
+        </html>
+        `
+      );
+
+      const thumbImg = page.locator('#thumb-img');
+
+      // 1. Initial blurred state
+      await expect.poll(() => thumbImg.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(50px)');
+
+      // 2. Hover over thumbnail
+      await page.hover('#thumb-img');
+      await expect.poll(() => thumbImg.getAttribute('data-comfort-revealed'))
+        .toBe('true');
+      await expect.poll(() => thumbImg.evaluate((el) => getComputedStyle(el).filter))
+        .toBe('blur(0px) brightness(1)');
+
+      // 3. YouTube dynamically mounts the inline-preview-player with video under cursor
+      await page.evaluate(() => {
+        const thumb = document.querySelector('#thumb-container')!;
+        const player = document.createElement('div');
+        player.id = 'inline-preview-player';
+        player.className = 'html5-video-player';
+        player.innerHTML = `<video id="preview-video" muted playsinline autoplay src="data:video/mp4;base64,"></video>`;
+        thumb.appendChild(player);
+      });
+
+      const previewVideo = page.locator('#preview-video');
+
+      // 4. Mutation observer reconciles and reveals the newly mounted video immediately
+      await expect.poll(() => previewVideo.getAttribute('data-comfort-revealed'))
+        .toBe('true');
+      await expect.poll(() => previewVideo.evaluate((el) => getComputedStyle(el).filter))
+        .toBe('blur(0px) brightness(1)');
+
+      // 5. Cursor moves away -> both thumbnail and video re-blur
+      await page.mouse.move(0, 0);
+      await expect.poll(() => thumbImg.getAttribute('data-comfort-revealed'))
+        .toBeNull();
+      await expect.poll(() => previewVideo.getAttribute('data-comfort-revealed'))
+        .toBeNull();
+      await expect.poll(() => thumbImg.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(50px)');
+      await expect.poll(() => previewVideo.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(50px)');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test('YouTube Shorts carousel shelf isolation: only hovered Short reveals while siblings stay blurred', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            ytd-reel-shelf-renderer { display: block; width: 1000px; height: 400px; position: relative; margin: 20px; }
+            #items { display: flex; gap: 16px; }
+            ytd-reel-item-renderer { display: block; width: 180px; height: 320px; position: relative; }
+            ytd-thumbnail { display: block; width: 180px; height: 320px; position: relative; }
+            ytd-thumbnail img { width: 100%; height: 100%; object-fit: cover; display: block; }
+          </style>
+        </head>
+        <body>
+          <ytd-reel-shelf-renderer id="shorts-shelf">
+            <div id="items">
+              <ytd-reel-item-renderer id="short-1">
+                <ytd-thumbnail>
+                  <img id="thumb-short-1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='320'><rect width='100%' height='100%' fill='blue'/></svg>">
+                </ytd-thumbnail>
+              </ytd-reel-item-renderer>
+              <ytd-reel-item-renderer id="short-2">
+                <ytd-thumbnail>
+                  <img id="thumb-short-2" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='320'><rect width='100%' height='100%' fill='green'/></svg>">
+                </ytd-thumbnail>
+              </ytd-reel-item-renderer>
+              <ytd-reel-item-renderer id="short-3">
+                <ytd-thumbnail>
+                  <img id="thumb-short-3" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='320'><rect width='100%' height='100%' fill='orange'/></svg>">
+                </ytd-thumbnail>
+              </ytd-reel-item-renderer>
+            </div>
+          </ytd-reel-shelf-renderer>
+        </body>
+        </html>
+        `
+      );
+
+      const s1 = page.locator('#thumb-short-1');
+      const s2 = page.locator('#thumb-short-2');
+      const s3 = page.locator('#thumb-short-3');
+
+      // All 3 shorts start blurred
+      await expect.poll(() => s1.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => s2.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => s3.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+
+      // Hover over Short 2
+      await page.hover('#thumb-short-2');
+
+      // Only Short 2 is revealed; Short 1 and 3 remain blurred
+      await expect.poll(() => s2.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => s2.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+
+      await expect.poll(() => s1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => s1.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+
+      await expect.poll(() => s3.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => s3.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+
+      // Move hover to Short 1
+      await page.hover('#thumb-short-1');
+
+      // Short 1 is revealed; Short 2 and 3 are blurred
+      await expect.poll(() => s1.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => s1.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+
+      await expect.poll(() => s2.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => s2.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+
+      await expect.poll(() => s3.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => s3.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test('Multi-layer scrim coordinate penetration: resolves media under overlay buttons/scrims', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            .player-card { position: relative; width: 400px; height: 250px; margin: 30px; }
+            .bg-media { position: absolute; inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='250'><rect width='100%' height='100%' fill='purple'/></svg>"); }
+            .video-under { position: absolute; inset: 0; width: 100%; height: 100%; }
+            .scrim-overlay { position: absolute; inset: 0; z-index: 10; cursor: pointer; }
+            .play-button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; }
+          </style>
+        </head>
+        <body>
+          <div class="player-card" id="card">
+            <video id="card-video" class="video-under" src="data:video/mp4;base64,"></video>
+            <div id="card-bg" class="bg-media" data-comfort-bg-image="true"></div>
+            <div id="card-scrim" class="scrim-overlay">
+              <button id="card-btn" class="play-button" type="button">Play</button>
+            </div>
+          </div>
+        </body>
+        </html>
+        `
+      );
+
+      const video = page.locator('#card-video');
+      const bg = page.locator('#card-bg');
+
+      // Both start blurred
+      await expect.poll(() => video.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => bg.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+
+      // Hover directly over the play button on top of the scrim
+      await page.hover('#card-btn');
+
+      // Both video and background image under the scrim reveal
+      await expect.poll(() => video.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => bg.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => video.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+      await expect.poll(() => bg.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+
+      // Move away
+      await page.mouse.move(0, 0);
+      await expect.poll(() => video.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => bg.getAttribute('data-comfort-revealed')).toBeNull();
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test('Generic multi-layer video stack on non-YouTube sites', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            .video-article { display: block; width: 480px; height: 300px; position: relative; margin: 20px; }
+            .video-wrapper { position: relative; width: 100%; height: 100%; }
+            .poster-img { width: 100%; height: 100%; object-fit: cover; }
+            .custom-video { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+            .video-wrapper.is-playing .poster-img { display: none; }
+            .video-wrapper.is-playing .custom-video { display: block; }
+          </style>
+        </head>
+        <body>
+          <article class="video-article">
+            <div class="video-wrapper" id="vwrap">
+              <img id="poster" class="poster-img" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='480' height='300'><rect width='100%' height='100%' fill='indigo'/></svg>">
+              <video id="vplayer" class="custom-video" src="data:video/mp4;base64,"></video>
+            </div>
+          </article>
+        </body>
+        </html>
+        `
+      );
+
+      const poster = page.locator('#poster');
+      const player = page.locator('#vplayer');
+
+      // Hover over poster
+      await page.hover('#poster');
+      await expect.poll(() => poster.getAttribute('data-comfort-revealed')).toBe('true');
+
+      // Site starts playing and swaps poster for video
+      await page.evaluate(() => {
+        document.getElementById('vwrap')!.classList.add('is-playing');
+      });
+
+      // Video is now visible and unblurred
+      await expect.poll(() => player.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => player.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+
+      // Move away
+      await page.mouse.move(0, 0);
+      await expect.poll(() => player.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => player.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test('Dynamic node replacement maintains hover unblur without flashing', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            .slot { width: 300px; height: 200px; position: relative; margin: 20px; }
+            .slot img { width: 100%; height: 100%; display: block; }
+          </style>
+        </head>
+        <body>
+          <div class="slot" id="slot">
+            <img id="lqip" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='pink'/></svg>">
+          </div>
+        </body>
+        </html>
+        `
+      );
+
+      // Hover over LQIP image
+      await page.hover('#lqip');
+      await expect.poll(() => page.locator('#lqip').getAttribute('data-comfort-revealed')).toBe('true');
+
+      // Replace LQIP with high-res image
+      await page.evaluate(() => {
+        const slotEl = document.getElementById('slot')!;
+        slotEl.innerHTML = `<img id="hires" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='magenta'/></svg>">`;
+      });
+
+      // Newly inserted hires image is immediately revealed
+      const hires = page.locator('#hires');
+      await expect.poll(() => hires.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => hires.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+
+      // Move away
+      await page.mouse.move(0, 0);
+      await expect.poll(() => hires.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => hires.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test('Reveal mode "both": hover unblurs temporarily, click locks reveal permanently until clicked outside', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            .media-box { width: 300px; height: 200px; margin: 30px; }
+            img { width: 100%; height: 100%; display: block; }
+          </style>
+        </head>
+        <body>
+          <div class="media-box">
+            <img id="lock-img" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='teal'/></svg>">
+          </div>
+          <div id="outside" style="margin-top: 50px; height: 100px; width: 100px;">Outside</div>
+        </body>
+        </html>
+        `,
+        { revealMode: 'both' }
+      );
+
+      const img = page.locator('#lock-img');
+
+      // 1. Hover reveals
+      await page.hover('#lock-img');
+      await expect.poll(() => img.getAttribute('data-comfort-revealed')).toBe('true');
+
+      // 2. Click while hovering locks it
+      await page.click('#lock-img');
+      await expect.poll(() => img.getAttribute('data-comfort-revealed')).toBe('true');
+
+      // 3. Move mouse away -> still revealed because it is locked!
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(200);
+      await expect.poll(() => img.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => img.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+
+      // 4. Click outside unlocks and re-blurs
+      await page.click('#outside');
+      await expect.poll(() => img.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => img.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test('Autoplay / pointermove preservation: pointer events propagate freely to page listeners', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            .card { width: 300px; height: 200px; margin: 30px; }
+            img { width: 100%; height: 100%; display: block; }
+          </style>
+        </head>
+        <body>
+          <div class="card" id="card">
+            <img id="img" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='navy'/></svg>">
+          </div>
+          <script>
+            window.__pointerEventsReceived = [];
+            const card = document.getElementById('card');
+            card.addEventListener('pointerenter', (e) => window.__pointerEventsReceived.push('pointerenter'));
+            card.addEventListener('pointermove', (e) => window.__pointerEventsReceived.push('pointermove'));
+            card.addEventListener('pointerover', (e) => window.__pointerEventsReceived.push('pointerover'));
+          </script>
+        </body>
+        </html>
+        `
+      );
+
+      await page.hover('#img');
+      await page.mouse.move(50, 50);
+
+      const received = await page.evaluate(() => (window as unknown as { __pointerEventsReceived: string[] }).__pointerEventsReceived);
+      expect(received).toContain('pointermove');
+      expect(received.length).toBeGreaterThan(0);
+    } finally {
+      await browser.close();
+    }
+  });
+});
