@@ -272,6 +272,89 @@ test.describe('WebKit / Safari Extension Behavior', () => {
     }
   });
 
+  test('Row isolation: moving over header/strip/gap reveals nothing; only the hovered card reveals', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await setupWebKitPage(
+        page,
+        `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { margin: 8px; font-family: sans-serif; }
+            #section { width: 800px; }
+            #header { width: 800px; height: 32px; line-height: 32px; }
+            #strip { width: 800px; height: 6px; }
+            #row { display: flex; gap: 16px; width: 800px; }
+            .card { width: 240px; }
+            .card img { width: 240px; height: 135px; display: block; }
+            .card h3 { margin: 0; font-size: 14px; height: 20px; }
+          </style>
+        </head>
+        <body>
+          <section id="section">
+            <div id="header">Recommended</div>
+            <div id="strip"></div>
+            <div id="row">
+              <div class="card" id="card1"><img id="t1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='135'><rect width='100%' height='100%' fill='tomato'/></svg>"><h3>One</h3></div>
+              <div class="card" id="card2"><img id="t2" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='135'><rect width='100%' height='100%' fill='seagreen'/></svg>"><h3>Two</h3></div>
+              <div class="card" id="card3"><img id="t3" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='135'><rect width='100%' height='100%' fill='steelblue'/></svg>"><h3>Three</h3></div>
+            </div>
+          </section>
+        </body>
+        </html>
+        `
+      );
+
+      const t1 = page.locator('#t1');
+      const t2 = page.locator('#t2');
+      const t3 = page.locator('#t3');
+
+      // All start blurred
+      await expect.poll(() => t1.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => t2.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => t3.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+
+      // 1. Moving over the section header (no media under cursor) reveals nothing
+      await page.hover('#header');
+      await expect.poll(() => t1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t2.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t3.getAttribute('data-comfort-revealed')).toBeNull();
+
+      // 2. Moving over the thin strip (6px) above the row reveals nothing
+      await page.hover('#strip');
+      await expect.poll(() => t1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t2.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t3.getAttribute('data-comfort-revealed')).toBeNull();
+
+      // 3. Moving through the 16px gap between card 1 and card 2 reveals nothing
+      // (card 1 spans x 8..248, gap 248..264, card 2 spans x 264..504; row top = 8 + 32 + 6 + 8 = 54)
+      await page.mouse.move(256, 100);
+      await expect.poll(() => t1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t2.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t3.getAttribute('data-comfort-revealed')).toBeNull();
+
+      // 4. Hovering card 2 reveals only card 2, not the row's first card
+      await page.hover('#t2');
+      await expect.poll(() => t2.getAttribute('data-comfort-revealed')).toBe('true');
+      await expect.poll(() => t2.evaluate((el) => getComputedStyle(el).filter)).toBe('blur(0px) brightness(1)');
+      await expect.poll(() => t1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t1.evaluate((el) => getComputedStyle(el).filter)).toContain('blur(50px)');
+      await expect.poll(() => t3.getAttribute('data-comfort-revealed')).toBeNull();
+
+      // 5. Move away: everything re-blurs
+      await page.mouse.move(0, 0);
+      await expect.poll(() => t2.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t1.getAttribute('data-comfort-revealed')).toBeNull();
+      await expect.poll(() => t3.getAttribute('data-comfort-revealed')).toBeNull();
+    } finally {
+      await browser.close();
+    }
+  });
+
   test('Multi-layer scrim coordinate penetration: resolves media under overlay buttons/scrims', async () => {
     const browser = await webkit.launch({ headless: true });
     const page = await browser.newPage();

@@ -545,3 +545,129 @@ describe('reveal handlers', () => {
     expect(!thumb.dispatchEvent(clk2)).toBe(false);
   });
 });
+
+describe('reveal resolution geometry: no DOM-order-first guesses', () => {
+  // Per-element rects. A single prototype-level mock keyed by element avoids
+  // instance-level spyOn collisions in happy-dom.
+  const rects = new Map<Element, DOMRect>();
+
+  function setRect(el: HTMLElement, width: number, height: number, top: number, left: number): void {
+    rects.set(el, {
+      width,
+      height,
+      top,
+      left,
+      right: left + width,
+      bottom: top + height,
+      x: left,
+      y: top,
+      toJSON: () => ({}),
+    });
+  }
+
+  function rowOfThreeThumbs(): { t1: HTMLImageElement; t2: HTMLImageElement; t3: HTMLImageElement } {
+    document.body.innerHTML = `
+      <div id="wrapper">
+        <div class="card" id="card1"><img id="t1" src="a.png"></div>
+        <div class="card" id="card2"><img id="t2" src="b.png"></div>
+        <div class="card" id="card3"><img id="t3" src="c.png"></div>
+      </div>
+    `;
+    const t1 = document.querySelector('#t1') as HTMLImageElement;
+    const t2 = document.querySelector('#t2') as HTMLImageElement;
+    const t3 = document.querySelector('#t3') as HTMLImageElement;
+    setRect(t1, 240, 160, 50, 0);
+    setRect(t2, 240, 160, 50, 240);
+    setRect(t3, 240, 160, 50, 480);
+    setRect(document.querySelector('#card1') as HTMLElement, 240, 160, 50, 0);
+    setRect(document.querySelector('#card2') as HTMLElement, 240, 160, 50, 240);
+    setRect(document.querySelector('#card3') as HTMLElement, 240, 160, 50, 480);
+    return { t1, t2, t3 };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    rects.clear();
+    // happy-dom's hit-testing is naive (returns unrelated nodes); real
+    // browsers only include elements whose box contains the point. Neutralize
+    // the stack path so these tests exercise the target-based resolver in
+    // isolation. spyOn throws loudly if the property is not overridable, so a
+    // non-inert stack can never pass silently.
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
+    if (typeof (document as unknown as { elementsFromPoint?: unknown }).elementsFromPoint === 'function') {
+      vi.spyOn(document, 'elementsFromPoint').mockReturnValue([]);
+    }
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return rects.get(this) ?? { width: 240, height: 160, top: 0, left: 0, right: 240, bottom: 160, x: 0, y: 0, toJSON: () => ({}) };
+    });
+  });
+
+  afterEach(() => {
+    teardownRevealHandlers();
+    vi.restoreAllMocks();
+  });
+
+  it('thin row wrapper (height < 16px): pointer over the strip reveals no video', () => {
+    const { t1, t2, t3 } = rowOfThreeThumbs();
+    const wrapper = document.querySelector('#wrapper') as HTMLElement;
+    setRect(wrapper, 720, 8, 0, 0); // thin strip; cards start at y=50
+
+    setupRevealHandlers('hover');
+
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 360, clientY: 4 }));
+
+    expect(t1.hasAttribute(REVEALED_ATTR)).toBe(false);
+    expect(t2.hasAttribute(REVEALED_ATTR)).toBe(false);
+    expect(t3.hasAttribute(REVEALED_ATTR)).toBe(false);
+  });
+
+  it('0x0 wrapper with a row of cards: pointer over wrapper text reveals no video', () => {
+    const { t1, t2, t3 } = rowOfThreeThumbs();
+    const wrapper = document.querySelector('#wrapper') as HTMLElement;
+    setRect(wrapper, 0, 0, 0, 0);
+    const label = document.createElement('span');
+    label.textContent = 'section';
+    wrapper.prepend(label);
+    setRect(label, 100, 20, 0, 0);
+
+    setupRevealHandlers('hover');
+
+    label.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 50, clientY: 10 }));
+
+    expect(t1.hasAttribute(REVEALED_ATTR)).toBe(false);
+    expect(t2.hasAttribute(REVEALED_ATTR)).toBe(false);
+    expect(t3.hasAttribute(REVEALED_ATTR)).toBe(false);
+  });
+
+  it('large section wrapper: pointer over the section header reveals no video (no DOM-order-first guess)', () => {
+    const { t1, t2, t3 } = rowOfThreeThumbs();
+    const wrapper = document.querySelector('#wrapper') as HTMLElement;
+    const header = document.createElement('h2');
+    header.textContent = 'Recommended';
+    wrapper.prepend(header);
+    setRect(wrapper, 1280, 400, 0, 0);
+    setRect(header, 400, 30, 0, 0); // header sits above the cards, no overlap
+
+    setupRevealHandlers('hover');
+
+    header.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 200, clientY: 15 }));
+
+    expect(t1.hasAttribute(REVEALED_ATTR)).toBe(false);
+    expect(t2.hasAttribute(REVEALED_ATTR)).toBe(false);
+    expect(t3.hasAttribute(REVEALED_ATTR)).toBe(false);
+  });
+
+  it('hovering a card inside a row reveals only that card', () => {
+    const { t1, t2, t3 } = rowOfThreeThumbs();
+    setRect(document.querySelector('#wrapper') as HTMLElement, 720, 200, 0, 0);
+
+    setupRevealHandlers('hover');
+
+    // Pointer over the second thumb (left 240..480, top 50..210).
+    t2.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 360, clientY: 100 }));
+
+    expect(t2.hasAttribute(REVEALED_ATTR)).toBe(true);
+    expect(t1.hasAttribute(REVEALED_ATTR)).toBe(false);
+    expect(t3.hasAttribute(REVEALED_ATTR)).toBe(false);
+  });
+});

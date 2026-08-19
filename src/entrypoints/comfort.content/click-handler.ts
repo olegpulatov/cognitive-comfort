@@ -452,7 +452,7 @@ function collectBoundedMediaCandidates(root: Element): Element[] {
   return candidates;
 }
 
-function findRevealTarget(target: Element): Element | null {
+function findRevealTarget(target: Element, point: { x: number; y: number }): Element | null {
   const directMedia = target.closest(MEDIA_SELECTORS);
   if (directMedia) return directMedia;
 
@@ -460,7 +460,7 @@ function findRevealTarget(target: Element): Element | null {
   let depth = 0;
 
   while (container && depth < MAX_CONTAINER_DEPTH && !isExcludedContainer(container)) {
-    const descendantMedia = findBestDescendantMedia(container);
+    const descendantMedia = findBestDescendantMedia(container, point);
     if (descendantMedia) return descendantMedia;
 
     container = container.parentElement;
@@ -470,16 +470,46 @@ function findRevealTarget(target: Element): Element | null {
   return null;
 }
 
-function findBestDescendantMedia(container: Element): Element | null {
+function findBestDescendantMedia(
+  container: Element,
+  point: { x: number; y: number }
+): Element | null {
   const candidates = collectBoundedMediaCandidates(container);
   if (candidates.length === 0) return null;
 
   const containerRect = container.getBoundingClientRect();
+
+  // Container too small to judge geometry (thin row gaps, 0x0 wrappers during
+  // layout, transient mounts). Never guess DOM-order-first here: that resolved
+  // the first card of a row for any cursor position. Only media verifiably
+  // under the cursor may resolve.
   if (containerRect.width < MIN_MEDIA_SIZE || containerRect.height < MIN_MEDIA_SIZE) {
-    return candidates[0] ?? null;
+    return candidates.find((candidate) => mediaContainsPoint(candidate, point)) ?? null;
   }
 
-  return findMediaCoveringContainer(containerRect, candidates) ?? candidates[0] ?? null;
+  return (
+    candidates.find((candidate) => isMediaSizedLikeContainer(containerRect, candidate)) ??
+    findMediaCoveringContainer(containerRect, candidates) ??
+    (candidates.find((candidate) => mediaContainsPoint(candidate, point)) ?? null)
+  );
+}
+
+function mediaContainsPoint(media: Element, point: { x: number; y: number }): boolean {
+  const rect = media.getBoundingClientRect();
+  if (rect.width < MIN_MEDIA_SIZE || rect.height < MIN_MEDIA_SIZE) return false;
+
+  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
+function isMediaSizedLikeContainer(containerRect: DOMRect, media: Element): boolean {
+  const mediaRect = media.getBoundingClientRect();
+
+  if (mediaRect.width < MIN_MEDIA_SIZE || mediaRect.height < MIN_MEDIA_SIZE) return false;
+
+  const widthDelta = Math.abs(containerRect.width - mediaRect.width);
+  const heightDelta = Math.abs(containerRect.height - mediaRect.height);
+
+  return widthDelta <= MAX_CONTAINER_DELTA && heightDelta <= MAX_CONTAINER_DELTA;
 }
 
 function findMediaCoveringContainer(containerRect: DOMRect, candidates: Element[]): Element | null {
@@ -509,9 +539,11 @@ function findRevealCluster(
 ): Element[] {
   const cluster = new Set<Element>();
 
-  // 1. Target-based resolution
-  if (target && isElementNode(target)) {
-    const targetMedia = findRevealTarget(target);
+  // 1. Target-based resolution. Resolution is point-aware by design: without
+  // cursor geometry the resolver would have to guess (the old DOM-order-first
+  // fallback revealed the first card of a row for any cursor position).
+  if (target && point && isElementNode(target)) {
+    const targetMedia = findRevealTarget(target, point);
     if (targetMedia) {
       for (const m of collectRevealCluster(targetMedia, point)) {
         cluster.add(m);
@@ -528,7 +560,7 @@ function findRevealCluster(
           cluster.add(m);
         }
       } else if (isCardOrPlayerSized(el)) {
-        const targetMedia = findRevealTarget(el);
+        const targetMedia = findRevealTarget(el, point);
         if (targetMedia) {
           for (const m of collectRevealCluster(targetMedia, point)) {
             cluster.add(m);
