@@ -10,7 +10,6 @@ body.popup-shell {
   background-color: var(--ground);
   min-height: 100%;
   overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
 .popup-container {
@@ -20,4 +19,40 @@ body.popup-shell {
 .sheet-more {
   margin-top: var(--gap);
   text-align: center;
+}
+
+/*
+  Safari popovers auto-resize the native window to the popup's content height.
+  That resize fight disables scroll inertia (sluggish, momentum-less scrolling)
+  and breaks root-background propagation, so the popover's own grey shows
+  behind the page while scrolling. Pinning the popup to the popover's fixed
+  viewport stops the resizing: body becomes a fixed-height scroll container
+  with normal WebKit momentum, and its background always covers the popover.
+  Gated on a WebKit-only property (Safari still requires the -webkit- prefix
+  for backdrop-filter; Chrome/Firefox support only the unprefixed form), so
+  Chrome/Firefox keep browser-sized popups.
+*/
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  html,
+  body.popup-shell {
+    height: 600px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* The popup scrolls inside body now; theme its scrollbar so Safari's
+     default grey thumb never shows. */
+  body.popup-shell::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  body.popup-shell::-webkit-scrollbar-track {
+    background: var(--ground);
+  }
+
+  body.popup-shell::-webkit-scrollbar-thumb {
+    background: var(--rule-strong);
+    border: 3px solid var(--ground);
+    border-radius: 5px;
+  }
 }

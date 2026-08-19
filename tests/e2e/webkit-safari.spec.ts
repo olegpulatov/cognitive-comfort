@@ -672,4 +672,58 @@ test.describe('WebKit / Safari Extension Behavior', () => {
       await browser.close();
     }
   });
+
+  test('Safari popup pins to the popover viewport: fixed-height body scroll, dark background, no document scroll', async () => {
+    const browser = await webkit.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.addInitScript(() => {
+        const browser = {
+          storage: {
+            local: { get: async () => ({}), set: async () => {} },
+            onChanged: { addListener() {} },
+          },
+          commands: { getAll: async () => [] },
+          tabs: { query: async () => [{ url: 'https://example.com/' }] },
+          runtime: {
+            openOptionsPage: async () => {},
+            sendMessage: async () => undefined,
+            getURL: (s: string) => s,
+          },
+        };
+        Object.assign(globalThis, { browser });
+      });
+
+      await page.goto('http://127.0.0.1:4177/popup.html');
+      await page.waitForSelector('#buildInfo');
+
+      // Content must overflow the 600px popover cap, or there is nothing to pin.
+      await expect.poll(() => page.evaluate(() => document.body.scrollHeight)).toBeGreaterThan(600);
+
+      const probe = await page.evaluate(() => {
+        const cs = (el: Element) => getComputedStyle(el);
+        const docEl = document.documentElement;
+        return {
+          htmlHeight: cs(docEl).height,
+          bodyOverflowY: cs(document.body).overflowY,
+          bodyClientHeight: document.body.clientHeight,
+          docScrollable: docEl.scrollHeight > docEl.clientHeight,
+          bodyBg: cs(document.body).backgroundColor,
+        };
+      });
+
+      // Safari popovers auto-resize the native window to content height, which
+      // kills scroll inertia and lets the popover's grey show while scrolling.
+      // The WebKit-only @supports gate pins the popup: body owns the scroll and
+      // its background always covers the popover.
+      expect(probe.htmlHeight).toBe('600px');
+      expect(probe.bodyOverflowY).toBe('auto');
+      expect(probe.bodyClientHeight).toBe(600);
+      expect(probe.docScrollable).toBe(false);
+      expect(probe.bodyBg).toBe('rgb(20, 17, 14)');
+    } finally {
+      await browser.close();
+    }
+  });
 });
