@@ -3,6 +3,7 @@ import { getSiteOverride } from './domain';
 
 export const COMFORT_SETTINGS_KEY = 'comfortSettings';
 export const COMFORT_SETTINGS_UPDATE_MESSAGE = 'comfort-settings-update';
+export const COMFORT_SETTINGS_CHANGED_MESSAGE = 'comfort-settings-changed';
 export const COMFORT_SITE_OVERRIDE_UPDATE_MESSAGE = 'comfort-site-override-update';
 export const SCHEMA_VERSION = 1;
 

@@ -1,6 +1,7 @@
 import { getBrowserActionPresentation } from '../utils/browser-action';
 import { getDomain } from '../utils/domain';
 import {
+  COMFORT_SETTINGS_CHANGED_MESSAGE,
   applySettingsUpdate,
   applySiteOverrideUpdate,
   getSettings,
@@ -32,9 +33,47 @@ async function updateBrowserAction(): Promise<void> {
   }
 }
 
+async function updateContentScripts(): Promise<void> {
+  const tabs = await browser.tabs.query({}).catch(() => []);
+
+  await Promise.all(
+    tabs.map(async (tab) => {
+      if (tab.id === undefined) return;
+
+      await browser.tabs.sendMessage(tab.id, {
+        type: COMFORT_SETTINGS_CHANGED_MESSAGE,
+      }).catch(() => {});
+    })
+  );
+}
+
+let contentScriptUpdatePending = false;
+let contentScriptUpdateRunning = false;
+
+function queueContentScriptUpdate(): void {
+  contentScriptUpdatePending = true;
+  if (contentScriptUpdateRunning) return;
+
+  contentScriptUpdateRunning = true;
+  void (async () => {
+    try {
+      while (contentScriptUpdatePending) {
+        contentScriptUpdatePending = false;
+        await updateContentScripts();
+      }
+    } catch {
+      // A later settings change can retry a failed notification.
+    } finally {
+      contentScriptUpdateRunning = false;
+      if (contentScriptUpdatePending) queueContentScriptUpdate();
+    }
+  })();
+}
+
 export default defineBackground(() => {
   onSettingsChange(() => {
     void updateBrowserAction();
+    queueContentScriptUpdate();
   });
 
   browser.tabs.onActivated?.addListener((activeInfo) => {

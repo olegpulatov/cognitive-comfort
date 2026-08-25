@@ -1,6 +1,7 @@
 import type { ComfortSettings } from '../../utils/types';
 import { getDomain } from '../../utils/domain';
 import {
+  COMFORT_SETTINGS_CHANGED_MESSAGE,
   getSettings,
   isActiveForSite,
   isEmojiBlockedForSite,
@@ -33,12 +34,39 @@ export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_start',
   main: async () => {
+    let initialized = false;
+    let refreshGeneration = 0;
+    let appliedSettingsKey = '';
+
+    const requestSettingsRefresh = (): void => {
+      const generation = ++refreshGeneration;
+      if (!initialized) return;
+
+      void getSettings()
+        .then((nextSettings) => {
+          if (generation !== refreshGeneration) return;
+
+          const nextSettingsKey = JSON.stringify(nextSettings);
+          if (nextSettingsKey === appliedSettingsKey) return;
+
+          applySettings(nextSettings);
+          appliedSettingsKey = nextSettingsKey;
+        })
+        .catch(() => {
+          // The next settings notification can retry a failed read or apply.
+        });
+    };
+
+    onSettingsChange(() => requestSettingsRefresh());
+    browser.runtime.onMessage.addListener((message) => {
+      if (message?.type === COMFORT_SETTINGS_CHANGED_MESSAGE) requestSettingsRefresh();
+    });
+
     const settings = await getSettings();
     applySettings(settings);
-
-    onSettingsChange((nextSettings) => {
-      applySettings(nextSettings);
-    });
+    appliedSettingsKey = JSON.stringify(settings);
+    initialized = true;
+    if (refreshGeneration > 0) requestSettingsRefresh();
 
     setupPeekHandler();
   },
