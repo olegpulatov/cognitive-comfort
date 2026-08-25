@@ -105,8 +105,6 @@ async function assertControlHasFocusRing(locator: Locator): Promise<void> {
 
 interface BrowserActionState {
   title: string;
-  badgeText: string;
-  badgeColor: number[];
 }
 
 async function getActiveTabBrowserActionState(env: TestEnv): Promise<BrowserActionState> {
@@ -119,20 +117,14 @@ async function getActiveTabBrowserActionState(env: TestEnv): Promise<BrowserActi
         tabs: { query: (details: { active: boolean; currentWindow: boolean }) => Promise<Array<{ id?: number }>> };
         action: {
           getTitle: (details: { tabId: number }) => Promise<string>;
-          getBadgeText: (details: { tabId: number }) => Promise<string>;
-          getBadgeBackgroundColor: (details: { tabId: number }) => Promise<number[]>;
         };
       };
     }).chrome;
     const [tab] = await api.tabs.query({ active: true, currentWindow: true });
     if (tab?.id === undefined) throw new Error('No active tab available for browser-action assertion.');
 
-    const [title, badgeText, badgeColor] = await Promise.all([
-      api.action.getTitle({ tabId: tab.id }),
-      api.action.getBadgeText({ tabId: tab.id }),
-      api.action.getBadgeBackgroundColor({ tabId: tab.id }),
-    ]);
-    return { title, badgeText, badgeColor };
+    const title = await api.action.getTitle({ tabId: tab.id });
+    return { title };
   });
 }
 
@@ -490,31 +482,25 @@ test.describe('Chromium Extension Acceptance Suite', () => {
     }
   });
 
-  test('10. Browser action reflects active, paused, and global-show states', async () => {
+  test('10. Browser action reflects active, paused, and global-show titles', async () => {
     const env = await createTestEnv();
     try {
       // Without an activeTab grant, Chrome intentionally withholds the tab URL;
       // the action still reports the global active state.
       await expect.poll(() => getActiveTabBrowserActionState(env)).toEqual({
         title: 'Cognitive Comfort — Active',
-        badgeText: '',
-        badgeColor: [0, 0, 0, 0],
       });
 
       const popup = await openPopup(env, fixtureUrl);
       await popup.locator('#pauseBtn').click();
       await expect.poll(() => getActiveTabBrowserActionState(env)).toEqual({
         title: 'Cognitive Comfort — Paused',
-        badgeText: '⏸',
-        badgeColor: [196, 112, 90, 255],
       });
 
       await popup.locator('#pauseBtn').click();
       await popup.locator('#globalDisabled').click();
       await expect.poll(() => getActiveTabBrowserActionState(env)).toEqual({
         title: 'Cognitive Comfort — Media shown globally',
-        badgeText: '○',
-        badgeColor: [141, 114, 64, 255],
       });
 
       expect(env.errors).toEqual([]);

@@ -19,12 +19,10 @@ Acceptance: `pnpm test:e2e` runs 21 automated tests (10 Chromium + 11 WebKit).
 
 ## 2. Browser-action feedback (done 2026-08-19)
 
-Toolbar affordances reflect the effective state of the active tab (`src/entrypoints/background.ts`):
+The toolbar action keeps the icon visually quiet and uses only its title to report the effective state of the active tab (`src/entrypoints/background.ts`):
 
 - `action.setTitle`: dynamic title reflecting effective state (`Cognitive Comfort — Paused`, `Cognitive Comfort — Media shown on <domain>`, `Cognitive Comfort — Media blurred on <domain>`).
-- `action.setBadgeText`: single-glyph badges (`'⏸'` for paused, `'○'` for media shown/disabled, `''` for active/blurred).
-- `action.setBadgeBackgroundColor`: colors drawn from palette constants (`--stamp` `#c4705a` for paused, `--brass-quiet` `#8d7240` for show/disabled).
-- Synchronized on tab activation (`tabs.onActivated`), navigation/updates (`tabs.onUpdated`), and storage changes (`onSettingsChange`); Chromium acceptance test 10 covers action API transitions, while `tests/browser-action.test.ts` covers per-domain presentation.
+- Synchronized on tab activation (`tabs.onActivated`), navigation/updates (`tabs.onUpdated`), and storage changes (`onSettingsChange`); Chromium acceptance test 10 covers action title transitions, while `tests/browser-action.test.ts` covers per-domain presentation.
 
 ## 3. On-page reveal affordance (done 2026-08-19)
 

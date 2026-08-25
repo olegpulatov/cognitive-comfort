@@ -23,10 +23,6 @@ async function updateBrowserActionForTab(tab?: { id?: number; url?: string }): P
 
   const presentation = getBrowserActionPresentation(settings, domain);
   await actionApi.setTitle({ title: presentation.title, tabId }).catch(() => {});
-  await actionApi.setBadgeText({ text: presentation.badgeText, tabId }).catch(() => {});
-  if (presentation.badgeColor) {
-    await actionApi.setBadgeBackgroundColor({ color: presentation.badgeColor, tabId }).catch(() => {});
-  }
 }
 
 async function updateBrowserAction(): Promise<void> {
