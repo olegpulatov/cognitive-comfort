@@ -53,6 +53,7 @@ let currentMode: RevealMode = 'click';
 let handlersActive = false;
 let hoverCluster = new Set<Element>();
 let lockedCluster = new Set<Element>();
+let lockedRegions: { container: Element; rect: DOMRect }[] = [];
 let swallowedClickCluster = new Set<Element>();
 let lastPointerX = 0;
 let lastPointerY = 0;
@@ -178,19 +179,7 @@ function handlePointerMove(event: PointerEvent): void {
 }
 
 function clearHoverIfCursorLeft(): void {
-  if (!lastPointerKnown) {
-    clearHoverCluster();
-    return;
-  }
-
-  // 1. Is there media currently at the cursor coordinates?
-  const currentMedia = findRevealCluster(null, { x: lastPointerX, y: lastPointerY });
-  if (currentMedia.length > 0) {
-    syncHoverCluster(currentMedia);
-    return;
-  }
-
-  // 2. Is the cursor still inside the bounding box of an existing hovered element?
+  // The pointermove resolver already found no media at these coordinates.
   for (const element of hoverCluster) {
     const rect = element.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) continue;
@@ -231,8 +220,7 @@ function observeMediaMutations(): void {
   if (observer) return;
 
   observer = new MutationObserver(() => {
-    if (currentMode === 'click') return;
-    if (!lastPointerKnown) return;
+    if (lockedRegions.length === 0 && lockedCluster.size === 0 && (currentMode === 'click' || !lastPointerKnown)) return;
 
     scheduleReconcile(0);
   });
@@ -265,6 +253,7 @@ function scheduleReconcile(delayMs: number): void {
   if (reconnectTimer !== null) return;
   reconnectTimer = window.setTimeout(() => {
     reconnectTimer = null;
+    reconcileLockedCluster();
     reconcileAtPointer();
     attachObserver();
   }, delayMs);
@@ -279,17 +268,55 @@ function reconcileAtPointer(): void {
   }
 }
 
+function reconcileLockedCluster(): void {
+  for (const cluster of [lockedCluster, hoverCluster, swallowedClickCluster]) {
+    for (const element of cluster) {
+      if (!element.isConnected) {
+        cluster.delete(element);
+        element.removeAttribute(REVEALED_ATTR);
+      }
+    }
+  }
+  lockedRegions = lockedRegions.filter(({ container }) => container.isConnected);
+  for (const { container, rect } of lockedRegions) {
+    for (const candidate of collectBoundedMediaCandidates(container)) {
+      if (
+        !lockedCluster.has(candidate) &&
+        isSameMediaRegion(rect, candidate) &&
+        findClusterContainer(candidate, candidate.getBoundingClientRect()) === container
+      ) {
+        lockedCluster.add(candidate);
+        syncRevealState(candidate);
+      }
+    }
+  }
+}
+
 function lockCluster(elements: Element[]): void {
   clearLockedCluster();
   for (const element of elements) {
     lockedCluster.add(element);
     syncRevealState(element);
+    if (!element.matches(MEDIA_SELECTORS)) continue;
+    const rect = element.getBoundingClientRect();
+    const container = findClusterContainer(element, rect);
+    if (
+      isElementNode(container) &&
+      !isExcludedContainer(container) &&
+      isCardOrPlayerSized(container) &&
+      (CARD_BOUNDARY_TAGS[container.tagName] || isContainerSizedLikeMedia(rect, container)) &&
+      !lockedRegions.some((region) => region.container === container && isSameMediaRegion(region.rect, element))
+    ) {
+      // Keep the bounded region, not the thumbnail that a preview may remove.
+      lockedRegions.push({ container, rect });
+    }
   }
 }
 
 function clearLockedCluster(): void {
   const previous = [...lockedCluster];
   lockedCluster.clear();
+  lockedRegions = [];
   for (const element of previous) {
     syncRevealState(element);
   }
@@ -331,6 +358,7 @@ function syncRevealState(element: Element): void {
 export function clearAllRevealed(): void {
   hoverCluster.clear();
   lockedCluster.clear();
+  lockedRegions = [];
   swallowedClickCluster.clear();
 
   const revealed = document.querySelectorAll(`[${REVEALED_ATTR}]`);

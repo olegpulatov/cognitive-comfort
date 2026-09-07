@@ -607,6 +607,68 @@ describe('reveal resolution geometry: no DOM-order-first guesses', () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['click', 'both'] as const)('keeps a same-card replacement video locked after the pointer leaves in %s mode', async (mode) => {
+    vi.useFakeTimers();
+    try {
+      const { t1, t2 } = rowOfThreeThumbs();
+      const card = document.querySelector('#card1') as HTMLElement;
+      const neighbor = document.querySelector('#card2') as HTMLElement;
+      setRect(document.querySelector('#wrapper') as HTMLElement, 720, 200, 0, 0);
+      setupRevealHandlers(mode);
+      t1.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 100, clientY: 100 }));
+      t1.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 100, clientY: 100 }));
+      t1.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: 100, clientY: 100 }));
+      document.body.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 1000, clientY: 1000 }));
+
+      const video = document.createElement('video');
+      setRect(video, 240, 160, 50, 0);
+      card.replaceChildren(video);
+      const neighborVideo = document.createElement('video');
+      // Even geometric overlap must not transfer the lock across card roots.
+      setRect(neighborVideo, 240, 160, 50, 0);
+      neighbor.appendChild(neighborVideo);
+      const overlay = document.createElement('video');
+      setRect(overlay, 240, 160, 50, 0);
+      document.body.appendChild(overlay);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(video.hasAttribute(REVEALED_ATTR)).toBe(true);
+      expect(t2.hasAttribute(REVEALED_ATTR)).toBe(false);
+      expect(neighborVideo.hasAttribute(REVEALED_ATTR)).toBe(false);
+      expect(overlay.hasAttribute(REVEALED_ATTR)).toBe(false);
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 1000, clientY: 1000 }));
+      expect(video.hasAttribute(REVEALED_ATTR)).toBe(false);
+      const laterVideo = document.createElement('video');
+      setRect(laterVideo, 240, 160, 50, 0);
+      card.replaceChildren(laterVideo);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(laterVideo.hasAttribute(REVEALED_ATTR)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not transfer a lock to a replacement card at the same position', async () => {
+    vi.useFakeTimers();
+    try {
+      const { t1 } = rowOfThreeThumbs();
+      setRect(document.querySelector('#wrapper') as HTMLElement, 720, 200, 0, 0);
+      setupRevealHandlers('click');
+      t1.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 100, clientY: 100 }));
+      const replacementCard = document.createElement('article');
+      const video = document.createElement('video');
+      setRect(replacementCard, 240, 160, 50, 0);
+      setRect(video, 240, 160, 50, 0);
+      replacementCard.appendChild(video);
+      document.querySelector('#card1')!.replaceWith(replacementCard);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(video.hasAttribute(REVEALED_ATTR)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('thin row wrapper (height < 16px): pointer over the strip reveals no video', () => {
     const { t1, t2, t3 } = rowOfThreeThumbs();
     const wrapper = document.querySelector('#wrapper') as HTMLElement;

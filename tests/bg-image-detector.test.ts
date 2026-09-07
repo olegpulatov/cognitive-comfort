@@ -22,6 +22,52 @@ function installComputedBackgrounds(): void {
   });
 }
 
+function deferAnimationFrames(): Array<FrameRequestCallback> {
+  const frames: Array<FrameRequestCallback> = [];
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  return frames;
+}
+
+function appendBackgrounds(count: number): HTMLDivElement[] {
+  const elements = Array.from({ length: count }, () => {
+    const element = document.createElement('div');
+    element.setAttribute('data-test-background', '');
+    return element;
+  });
+  document.body.append(...elements);
+  return elements;
+}
+
+function captureMutationObservers(): MutationCallback[] {
+  const callbacks: MutationCallback[] = [];
+  class TestMutationObserver {
+    constructor(callback: MutationCallback) {
+      callbacks.push(callback);
+    }
+    observe(): void {}
+    disconnect(): void {}
+    takeRecords(): MutationRecord[] {
+      return [];
+    }
+  }
+  vi.stubGlobal('MutationObserver', TestMutationObserver);
+  return callbacks;
+}
+
+function notifyAdded(callback: MutationCallback, elements: Element[]): void {
+  callback([
+    {
+      type: 'childList',
+      target: document.body,
+      addedNodes: elements,
+      removedNodes: [],
+    } as unknown as MutationRecord,
+  ], {} as MutationObserver);
+}
+
 describe('background image detector', () => {
   beforeEach(() => {
     teardownBgImageDetector();
@@ -174,5 +220,84 @@ describe('background image detector', () => {
       { type: 'childList', target: container, addedNodes: [], removedNodes: [btn] } as unknown as MutationRecord,
     ], {} as MutationObserver);
     expect(container.getAttribute(BG_IMAGE_ATTR)).toBe('true');
+  });
+
+  it('does not restore marks after teardown during an initial multi-frame scan', () => {
+    const frames = deferAnimationFrames();
+    const elements = appendBackgrounds(201);
+    setupBgImageDetector();
+    expect(elements[0].hasAttribute(BG_IMAGE_ATTR)).toBe(true);
+    expect(elements[100].hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+
+    teardownBgImageDetector();
+    while (frames.length) frames.shift()!(0);
+
+    expect(elements.every((element) => !element.hasAttribute(BG_IMAGE_ATTR))).toBe(true);
+  });
+
+  it('does not let an old initial frame advance a restarted scan', () => {
+    const frames = deferAnimationFrames();
+    const elements = appendBackgrounds(201);
+    setupBgImageDetector();
+    teardownBgImageDetector();
+    setupBgImageDetector();
+
+    frames.shift()!(0);
+    expect(elements[100].hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+    expect(elements[200].hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+
+    while (frames.length) frames.shift()!(0);
+    expect(elements.every((element) => element.hasAttribute(BG_IMAGE_ATTR))).toBe(true);
+  });
+
+  it.each([false, true])(
+    'does not let stale mutation work consume a restarted queue (continuation: %s)',
+    (continuation) => {
+      const frames = deferAnimationFrames();
+      const callbacks = captureMutationObservers();
+      setupBgImageDetector();
+      const oldElements = appendBackgrounds(201);
+      notifyAdded(callbacks[0], oldElements);
+      if (continuation) frames.shift()!(0);
+
+      teardownBgImageDetector();
+      oldElements.forEach((element) => element.remove());
+      setupBgImageDetector();
+      const [current] = appendBackgrounds(1);
+      notifyAdded(callbacks[1], [current]);
+
+      // Deliver the old frame even though its observer has been disconnected.
+      frames.shift()!(0);
+      expect(current.hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+      expect(oldElements.every((element) => !element.hasAttribute(BG_IMAGE_ATTR))).toBe(true);
+
+      while (frames.length) frames.shift()!(0);
+      expect(current.hasAttribute(BG_IMAGE_ATTR)).toBe(true);
+
+      const [later] = appendBackgrounds(1);
+      notifyAdded(callbacks[0], [later]);
+      while (frames.length) frames.shift()!(0);
+      expect(later.hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+      notifyAdded(callbacks[1], [later]);
+      while (frames.length) frames.shift()!(0);
+      expect(later.hasAttribute(BG_IMAGE_ATTR)).toBe(true);
+    }
+  );
+
+  it('skips elements detached before their initial or mutation frame runs', () => {
+    const frames = deferAnimationFrames();
+    const callbacks = captureMutationObservers();
+    const elements = appendBackgrounds(101);
+    setupBgImageDetector();
+    const detached = elements[100];
+    detached.remove();
+    while (frames.length) frames.shift()!(0);
+    expect(detached.hasAttribute(BG_IMAGE_ATTR)).toBe(false);
+
+    const [added] = appendBackgrounds(1);
+    notifyAdded(callbacks[0], [added]);
+    added.remove();
+    while (frames.length) frames.shift()!(0);
+    expect(added.hasAttribute(BG_IMAGE_ATTR)).toBe(false);
   });
 });

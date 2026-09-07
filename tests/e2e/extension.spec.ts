@@ -508,4 +508,114 @@ test.describe('Chromium Extension Acceptance Suite', () => {
       await destroyTestEnv(env);
     }
   });
+
+  test('11. Popup committed blur persists after immediate close without waiting for debounce', async () => {
+    const env = await createTestEnv();
+    try {
+      const popup = await openPopup(env, fixtureUrl);
+      await expect(popup.locator('#blurAmount')).toHaveValue('50');
+      // Freeze popup timers so even a slow browser cannot accidentally run the debounce.
+      await popup.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+      await popup.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));
+
+      await popup.locator('#blurAmount').focus();
+      await popup.keyboard.press('ArrowRight');
+      await popup.close();
+
+      const reopened = await openPopup(env, fixtureUrl);
+      await expect(reopened.locator('#blurAmount')).toHaveValue('51');
+      await expect.poll(() => env.page.locator('#normal-image').evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(51px)');
+      expect(env.errors).toEqual([]);
+    } finally {
+      await destroyTestEnv(env);
+    }
+  });
+
+  test('12. Popup blur input stays debounced and a committed save cannot overwrite a newer setting', async () => {
+    const env = await createTestEnv();
+    try {
+      const popup = await openPopup(env, fixtureUrl);
+      const slider = popup.locator('#blurAmount');
+      const normalImage = env.page.locator('#normal-image');
+      await expect(slider).toHaveValue('50');
+      await expect.poll(() => normalImage.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(50px)');
+      await popup.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+      await popup.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));
+
+      await slider.evaluate((el: HTMLInputElement) => {
+        el.value = '60';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.value = '65';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await expect(popup.locator('#blurAmountValue')).toHaveText('65');
+      await popup.clock.runFor(149);
+      expect(await normalImage.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(50px)');
+      await popup.clock.runFor(1);
+      await expect.poll(() => normalImage.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(65px)');
+
+      await slider.evaluate((el: HTMLInputElement) => {
+        el.value = '70';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await expect.poll(() => normalImage.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(70px)');
+
+      // Another settings surface wins; a stale popup timer must not restore 70.
+      const worker = env.context.serviceWorkers()[0];
+      await worker.evaluate(async () => {
+        // Chromium exposes the extension API in this worker outside DOM typings.
+        const g = globalThis as unknown as {
+          chrome: { storage: { local: {
+            get: (key: string) => Promise<{ comfortSettings: Record<string, unknown> }>;
+            set: (value: { comfortSettings: Record<string, unknown> }) => Promise<void>;
+          } } };
+        };
+        const api = g.chrome.storage.local;
+        const { comfortSettings } = await api.get('comfortSettings');
+        await api.set({ comfortSettings: { ...comfortSettings, blurAmount: 80 } });
+      });
+      await expect(slider).toHaveValue('80');
+      await popup.clock.runFor(150);
+      await popup.close();
+      const reopened = await openPopup(env, fixtureUrl);
+      await expect(reopened.locator('#blurAmount')).toHaveValue('80');
+      await expect.poll(() => normalImage.evaluate((el) => getComputedStyle(el).filter))
+        .toContain('blur(80px)');
+      expect(env.errors).toEqual([]);
+    } finally {
+      await destroyTestEnv(env);
+    }
+  });
+
+  test('13. Popup rejected shortcut navigation shows actionable fallback help', async () => {
+    const env = await createTestEnv();
+    try {
+      const popup = await openPopup(env, fixtureUrl);
+      await expect(popup.locator('#blurAmount')).toHaveValue('50');
+      await popup.evaluate(() => {
+        // The Chromium extension build binds its browser API to globalThis.chrome.
+        const g = globalThis as unknown as {
+          chrome: { tabs: { create: (details: { url: string }) => Promise<unknown> } };
+        };
+        g.chrome.tabs.create = async () => { throw new Error('Shortcut navigation unavailable'); };
+      });
+      await popup.locator('#editShortcuts').click();
+      await expect(popup.locator('#shortcutHelp')).toBeVisible();
+      await expect(popup.locator('#shortcutHelp')).toContainText(/open.*browser extension settings/i);
+      await expect(popup.locator('#shortcutHelp')).toContainText(/keyboard shortcuts/i);
+
+      // Failed navigation must leave the existing popup controls usable.
+      await popup.locator('#pauseBtn').click();
+      await expect(popup.locator('#pauseBtn')).toHaveText('Resume');
+      expect(env.errors).toEqual([]);
+    } finally {
+      await destroyTestEnv(env);
+    }
+  });
 });

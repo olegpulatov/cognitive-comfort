@@ -8,6 +8,8 @@ const ATTRIBUTE_FILTER = ['style', 'class', 'src', 'srcset', 'poster'];
 let observer: MutationObserver | null = null;
 let scanPending = false;
 let processingQueue = false;
+// Queued frames and observer callbacks belong to the setup that scheduled them.
+let generation = 0;
 const pendingElements = new Set<Element>();
 
 export function setupBgImageDetector(): void {
@@ -17,6 +19,7 @@ export function setupBgImageDetector(): void {
 }
 
 export function teardownBgImageDetector(): void {
+  generation += 1;
   if (observer) {
     observer.disconnect();
     observer = null;
@@ -51,10 +54,11 @@ function scanDocument(): void {
     batch.push(node as Element);
   }
 
-  processBatch(batch, 0);
+  processBatch(batch, 0, generation);
 }
 
-function processBatch(elements: Element[], startIndex: number): void {
+function processBatch(elements: Element[], startIndex: number, scanGeneration: number): void {
+  if (scanGeneration !== generation) return;
   const chunkSize = 100;
   const endIndex = Math.min(startIndex + chunkSize, elements.length);
 
@@ -63,11 +67,12 @@ function processBatch(elements: Element[], startIndex: number): void {
   }
 
   if (endIndex < elements.length) {
-    requestAnimationFrame(() => processBatch(elements, endIndex));
+    requestAnimationFrame(() => processBatch(elements, endIndex, scanGeneration));
   }
 }
 
 function syncElementMark(element: Element): void {
+  if (!element.isConnected) return;
   if (EXCLUDED_TAGS.has(element.tagName)) return;
   if (isEditableElement(element)) {
     element.removeAttribute(BG_IMAGE_ATTR);
@@ -109,7 +114,9 @@ function shouldIgnoreBackgroundElement(element: Element): boolean {
 }
 
 function observeChanges(): void {
+  const observerGeneration = generation;
   observer = new MutationObserver((mutations) => {
+    if (observerGeneration !== generation) return;
     for (const mutation of mutations) {
       if (mutation.target instanceof Element) {
         pendingElements.add(mutation.target);
@@ -131,8 +138,9 @@ function observeChanges(): void {
     if (scanPending) return;
     scanPending = true;
     requestAnimationFrame(() => {
+      if (observerGeneration !== generation) return;
       scanPending = false;
-      processPendingElements();
+      processPendingElements(observerGeneration);
     });
   });
 
@@ -158,7 +166,8 @@ function enqueueElementTree(root: Element, removed = false): void {
   });
 }
 
-function processPendingElements(): void {
+function processPendingElements(queueGeneration: number): void {
+  if (queueGeneration !== generation) return;
   if (processingQueue) return;
   processingQueue = true;
 
@@ -179,6 +188,6 @@ function processPendingElements(): void {
   processingQueue = false;
 
   if (pendingElements.size > 0) {
-    requestAnimationFrame(processPendingElements);
+    requestAnimationFrame(() => processPendingElements(queueGeneration));
   }
 }

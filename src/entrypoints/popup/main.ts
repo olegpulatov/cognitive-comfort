@@ -340,14 +340,28 @@ async function init(): Promise<void> {
 
     clearTimeout(blurAmountSaveTimer);
     blurAmountSaveTimer = window.setTimeout(() => {
+      blurAmountSaveTimer = undefined;
       void persist(() => saveSettings({ blurAmount }));
     }, 150);
   });
 
+  elements.blurAmount.addEventListener('change', () => {
+    if (blurAmountSaveTimer === undefined) return;
+    clearTimeout(blurAmountSaveTimer);
+    blurAmountSaveTimer = undefined;
+    const blurAmount = Number(elements.blurAmount.value);
+    void persist(() => saveSettings({ blurAmount }));
+  });
+
   elements.editShortcuts.addEventListener('click', async () => {
-    const message = await openShortcutSettings();
-    elements.shortcutHelp.hidden = !message;
-    elements.shortcutHelp.textContent = message ?? '';
+    try {
+      const message = await openShortcutSettings();
+      elements.shortcutHelp.hidden = !message;
+      elements.shortcutHelp.textContent = message ?? '';
+    } catch {
+      elements.shortcutHelp.textContent = 'Open your browser extension settings to change keyboard shortcuts.';
+      elements.shortcutHelp.hidden = false;
+    }
   });
 
   elements.openOptions.addEventListener('click', () => {

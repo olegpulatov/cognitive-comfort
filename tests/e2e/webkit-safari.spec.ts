@@ -189,6 +189,62 @@ test.describe('WebKit / Safari Extension Behavior', () => {
     }
   });
 
+  for (const revealMode of ['click', 'both'] as const) {
+    for (const leaveBeforeMount of [false, true]) {
+      test(`Same-card mounted video stays click-locked without revealing neighbors (${revealMode}, leave ${leaveBeforeMount ? 'before' : 'after'} mount)`, async () => {
+        const browser = await webkit.launch({ headless: true });
+        const page = await browser.newPage();
+        try {
+          await setupWebKitPage(page, `
+            <!DOCTYPE html>
+            <html><head><style>
+              body { margin: 40px; }
+              main { display: flex; gap: 40px; }
+              article, .slot { width: 300px; height: 200px; position: relative; }
+              img, video { display: block; width: 300px; height: 200px; }
+              #outside { position: fixed; left: 40px; top: 400px; }
+            </style></head><body>
+              <main>
+                <article><div class="slot" id="selected"><img id="thumb" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='crimson'/></svg>"></div></article>
+                <article><div class="slot" id="neighbor"><img id="neighbor-thumb" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='blue'/></svg>"></div></article>
+              </main>
+              <button id="outside">Outside media</button>
+            </body></html>
+          `, { revealMode });
+          await expect.poll(() => page.locator('#thumb').evaluate((el) => getComputedStyle(el).filter))
+            .toContain('blur(50px)');
+          await page.click('#thumb');
+          if (leaveBeforeMount) await page.hover('#outside');
+          await page.evaluate(() => {
+            const selected = document.createElement('video');
+            selected.id = 'selected-video';
+            selected.muted = true;
+            selected.playsInline = true;
+            document.querySelector('#selected')!.replaceChildren(selected);
+            const neighbor = document.createElement('video');
+            neighbor.id = 'neighbor-video';
+            document.querySelector('#neighbor')!.appendChild(neighbor);
+          });
+          const video = page.locator('#selected-video');
+          await expect.poll(() => video.evaluate((el) => getComputedStyle(el).filter))
+            .toBe('blur(0px) brightness(1)');
+          await page.hover('#outside');
+          await expect.poll(() => video.evaluate((el) => getComputedStyle(el).filter))
+            .toBe('blur(0px) brightness(1)');
+          await expect.poll(() => page.locator('#neighbor-thumb').evaluate((el) => getComputedStyle(el).filter))
+            .toContain('blur(50px)');
+          await expect.poll(() => page.locator('#neighbor-video').evaluate((el) => getComputedStyle(el).filter))
+            .toContain('blur(50px)');
+          await page.click('#outside');
+          await expect.poll(() => video.evaluate((el) => getComputedStyle(el).filter))
+            .toContain('blur(50px)');
+        } finally {
+          await browser.close();
+        }
+      });
+    }
+  }
+
   test('YouTube Shorts carousel shelf isolation: only hovered Short reveals while siblings stay blurred', async () => {
     const browser = await webkit.launch({ headless: true });
     const page = await browser.newPage();
