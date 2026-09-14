@@ -75,8 +75,14 @@ Three inputs, one output directory, no hand-composited art:
 ```fish
 just captures        # refresh store/captures/ from the built extension
 just store-assets    # compose store/out/ from copy.json
-just brand           # icons, captures, store assets
+just readme-media    # compress the README's images into store/readme/
+just brand           # icons, captures, store assets, README media
 ```
+
+`store/out/` is generated and untracked. `store/readme/` holds the four WebP files the
+README embeds and is tracked, because GitHub can only render images that exist in the
+repository. Regenerate it with `just readme-media` after any capture or copy change;
+`scripts/readme-media.sh` needs `cwebp`.
 
 `scripts/render-store-assets.mjs` renders `store/templates/asset.html` once per asset at
 exact store pixel dimensions. Filter while iterating: `just store-assets marquee shot-2`.

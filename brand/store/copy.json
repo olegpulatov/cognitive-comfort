@@ -13,6 +13,16 @@
       "capture": "captures/popup-default.png"
     },
     {
+      "id": "github-social-1280x640",
+      "kind": "marquee",
+      "width": 1280,
+      "height": 640,
+      "store": "GitHub repository social preview",
+      "headline": "Read first.\nLook when you decide.",
+      "caption": "A browser extension that blurs web media in place until you reveal it.",
+      "capture": "captures/popup-default.png"
+    },
+    {
       "id": "chrome-tile-440x280",
       "kind": "tile",
       "width": 440,

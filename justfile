@@ -45,9 +45,13 @@ captures: _install
 store-assets *filters: _install
     node ./scripts/render-store-assets.mjs {{ filters }}
 
-# Icons, fresh captures, then every store asset.
-brand: icons captures store-assets
-    @echo "Brand assets rebuilt in brand/icon and brand/store/out."
+# Compress the handful of assets the README embeds into tracked WebP (brand/store/readme/).
+readme-media:
+    bash ./scripts/readme-media.sh
+
+# Icons, fresh captures, every store asset, then the README media.
+brand: icons captures store-assets readme-media
+    @echo "Brand assets rebuilt in brand/icon, brand/store/out and brand/store/readme."
 
 # Zip one target: just zip chrome
 zip browser="chromium": _install

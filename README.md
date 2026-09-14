@@ -1,17 +1,35 @@
+<img src="brand/store/readme/header.webp" alt="Cognitive Comfort - read first, look when you decide." width="100%">
+
 # Cognitive Comfort
 
-Cognitive Comfort blurs images, videos, and other media on the pages you visit until you choose to see them. Built with WXT for Chrome, Edge, Firefox, and macOS Safari.
+Cognitive Comfort blurs images, video, and other media on the pages you visit until you
+choose to see them. Nothing is removed. Media keeps its place and its size behind a CSS
+filter, and a hover, a click, or a held shortcut brings it back. Built with WXT for
+Chrome, Edge, Firefox, and macOS Safari.
 
-[Install via Chrome Web Store](https://chromewebstore.google.com/detail/cognitive-comfort/fachhhdjmbceikclmlicjdaikhajdpbi)
+**Install** ·
+[Firefox](https://addons.mozilla.org/firefox/addon/cognitive-comfort/) ·
+[Chrome](https://chromewebstore.google.com/detail/cognitive-comfort/fachhhdjmbceikclmlicjdaikhajdpbi) ·
+[Edge](https://chromewebstore.google.com/detail/cognitive-comfort/fachhhdjmbceikclmlicjdaikhajdpbi) ·
+[Safari](https://apps.apple.com/app/cognitive-comfort/id6805033108?mt=12)
+
+**Watch** · [one-minute demonstration](https://www.youtube.com/watch?v=fn-R53QhF-M)
 
 ## What it does
 
-- Blurs images, video, canvases, supported embedded media, and eligible CSS background images.
-- Reveals media by click, hover, or Control+Shift+A peek.
-- Supports global settings and per-domain media/emoji overrides.
-- Optionally hides emoji presentation.
+- Blurs images, video, canvas, supported embedded media, and eligible CSS background images.
+- Reveals media by hover, by click, or by hover with click to lock. You pick the gesture.
+- Shows everything while you hold the peek shortcut (`Ctrl+Shift+A`).
+- Keeps a global default plus rules per domain for media and emoji, with visible precedence.
+- Hides emoji presentation if you switch it on.
 
-To apply those features, the content script locally inspects DOM elements, computed styles, geometry, and text nodes. Emoji hiding temporarily wraps matching emoji text in local `<span>` elements and restores visible text when disabled. The extension stores only settings and domain overrides. It does not transmit page data, run analytics, load third-party code, or make network requests of its own. See [`PRIVACY.md`](./PRIVACY.md).
+| | |
+| --- | --- |
+| ![An article page with every image blurred and dimmed](brand/store/readme/quiet.webp) | ![The same page with one photograph revealed](brand/store/readme/reveal.webp) |
+
+![The options page listing filed per-site rules](brand/store/readme/rules.webp)
+
+The content script reads the page to do this: DOM elements, computed styles, geometry, and text nodes. Emoji hiding wraps matching emoji text in local `<span>` elements and restores the visible text when you switch it off. The extension stores settings and domain overrides, nothing else. It does not transmit page data, run analytics, load third-party code, or make network requests of its own. See [`PRIVACY.md`](./PRIVACY.md).
 
 ## Repository and build profiles
 
@@ -19,8 +37,8 @@ To apply those features, the content script locally inspects DOM elements, compu
 
 `config/profiles/*.toml` provide product identity and defaults:
 
-- `public` — release behavior: all-media scope, hover + click lock reveal, 50px blur, emoji blocking disabled.
-- `local` — the same media defaults with emoji blocking enabled and a local Safari bundle identity.
+- `public`: release behavior, so all-media scope, hover with click lock reveal, 50px blur, emoji blocking disabled.
+- `local`: the same media defaults with emoji blocking enabled and a local Safari bundle identity.
 
 Machine paths, deployment, Apple teams, signing, store credentials, and submission live outside this repository.
 
